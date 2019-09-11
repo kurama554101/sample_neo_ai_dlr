@@ -40,8 +40,8 @@ class GstOverlayML(GstBase.BaseTransform):
             Read more:
             https://gstreamer.freedesktop.org/data/doc/gstreamer/head/gstreamer-libs/html/GstBaseTransform.html
         """
-        return Gst.FlowReturn.OK
-"""
+#        return Gst.FlowReturn.OK
+
         success, (width, height) = get_buffer_size(self.srcpad.get_current_caps())
         if not success:
             # https://lazka.github.io/pgi-docs/Gst-1.0/enums.html#Gst.FlowReturn
@@ -56,7 +56,7 @@ class GstOverlayML(GstBase.BaseTransform):
         draw_image(frame, overlay, x, y)
 
         return Gst.FlowReturn.OK
-"""
+
 
 
 def register(plugin):
@@ -76,13 +76,58 @@ def register_by_name(plugin_name):
     gst_license = 'LGPL'
     source_module = 'gstreamer'
     package = 'gstoverlay'
-    origin = 'lifestyletransfer.com'
+    origin = 'shotasakamoto554101@gmail.com'
     if not Gst.Plugin.register_static(Gst.VERSION_MAJOR, Gst.VERSION_MINOR,
                                       name, description,
                                       register, version, gst_license,
                                       source_module, package, origin):
         raise ImportError("Plugin {} not registered".format(plugin_name))
     return True
+
+
+def get_buffer_size(caps):
+    """
+        Returns width, height of buffer from caps
+        :param caps: https://lazka.github.io/pgi-docs/Gst-1.0/classes/Caps.html
+        :type caps: Gst.Caps
+        :rtype: bool, (int, int)
+    """
+
+    caps_struct = caps.get_structure(0)
+    (success, width) = caps_struct.get_int('width')
+    if not success:
+        return False, (0, 0)
+    (success, height) = caps_struct.get_int('height')
+    if not success:
+        return False, (0, 0)
+    return True, (width, height)
+
+
+@contextmanager
+def map_gst_buffer(pbuffer, flags):
+    """
+        Map Gst.Buffer for Read/Write
+        :param pbuffer: https://lazka.github.io/pgi-docs/Gst-1.0/classes/Buffer.html
+        :type pbuffer: Gst.Buffer
+        :param flags: https://lazka.github.io/pgi-docs/Gst-1.0/flags.html#Gst.MapFlags
+        :type flags: Gst.MapFlags
+    """
+    if pbuffer is None:
+        raise TypeError("Cannot pass NULL to _map_gst_buffer")
+
+    ptr = hash(pbuffer)  # Obraining pointer to buffer
+    if flags & Gst.MapFlags.WRITE and _libgst.gst_mini_object_is_writable(ptr) == 0:
+        raise ValueError("Writable array requested but buffer is not writeable")
+
+    mapping = _GstMapInfo()
+    success = _libgst.gst_buffer_map(ptr, mapping, flags)
+    if not success:
+        raise RuntimeError("Couldn't map buffer")
+    try:
+        yield cast(
+            mapping.data, POINTER(c_byte * mapping.size)).contents
+    finally:
+        _libgst.gst_buffer_unmap(ptr, mapping)
 
 
 register_by_name(GST_OVERLAY_ML)
