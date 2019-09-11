@@ -53,3 +53,27 @@ def random_tensor(shape, scale=1, shift=0, seed=100):
     # create random tensor
     tmp = np.random.random(count) * scale + shift
     return np.reshape(tmp, shape)
+
+
+def draw_image(source, image, x, y):
+    """
+        Places "image" with alpha channel on "source" at x, y
+        :param source:
+        :type source: numpy.ndarray
+        :param image:
+        :type image: numpy.ndarray (with alpha channel)
+        :param x:
+        :type x: int
+        :param y:
+        :type y: int
+        :rtype: numpy.ndarray
+    """
+    h, w = image.shape[:2]
+
+    max_x, max_y = x + w, y + h
+    alpha = image[:, :, 3] / 255.0
+    for c in range(0, 3):
+        color = image[:, :, c] * (alpha)
+        beta = source[y:max_y, x:max_x, c] * (1.0 - alpha)
+        source[y:max_y, x:max_x, c] = color + beta
+    return source

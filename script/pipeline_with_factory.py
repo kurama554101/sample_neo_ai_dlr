@@ -34,10 +34,7 @@ pipeline = Gst.Pipeline()
 # Creates element by name
 # https://lazka.github.io/pgi-docs/Gst-1.0/classes/ElementFactory.html#Gst.ElementFactory.make
 src_name = "my_video_test_src"
-# src = Gst.ElementFactory.make("videotestsrc", "my_video_test_src")
 src = Gst.ElementFactory.make("v4l2src", "my_video_test_src")
-#src.set_property("num-buffers", 50)
-#src.set_property("pattern", "ball")
 src.set_property("device", "/dev/video0")
 src.set_property("io-mode", 4)
 pipeline.add(src)
@@ -53,7 +50,6 @@ camerafilter1.set_property("caps", cap1)
 pipeline.add(camerafilter1)
 
 # add sink
-#sink = Gst.ElementFactory.make("gtksink")
 sink = Gst.ElementFactory.make("autovideosink")
 pipeline.add(sink)
 
