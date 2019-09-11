@@ -5,6 +5,7 @@ import gi
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst, GObject
 
+import gst_overlay_ml
 
 # Initializes Gstreamer, it's variables, paths
 Gst.init(sys.argv)
