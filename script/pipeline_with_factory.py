@@ -51,6 +51,10 @@ camerafilter1 = Gst.ElementFactory.make("capsfilter")
 camerafilter1.set_property("caps", cap1)
 pipeline.add(camerafilter1)
 
+# add ml function
+ml = Gst.ElementFactory.make("gstoverlayml")
+pipeline.add(ml)
+
 # add sink
 sink = Gst.ElementFactory.make("autovideosink")
 pipeline.add(sink)
@@ -58,7 +62,8 @@ pipeline.add(sink)
 # create link
 src.link(convert)
 convert.link(camerafilter1)
-camerafilter1.link(sink)
+camerafilter1.link(ml)
+ml.link(sink)
 
 assert src == pipeline.get_by_name(src_name)
 
