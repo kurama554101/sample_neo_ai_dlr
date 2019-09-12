@@ -48,11 +48,12 @@ class GstOverlayML(GstBase.BaseTransform):
 
         # set input param
         self._input_tensor_name = model_type.value["input_tensor_name"]
+        self._size = (300, 300)  # TODO : set size from outer
 
     def do_transform_ip(self, inbuffer):
         # convert inbuffer to ndarray
         # data format is HWC? (not contain N)
-        np_buffer = ndarray_from_gst_buffer(inbuffer)
+        np_buffer = ndarray_from_gst_buffer(inbuffer, self._size)
 
         # get bounding box information
         # need to convert data format from CHW to NCHW
@@ -131,64 +132,10 @@ def get_buffer_size(caps):
     return True, (width, height)
 
 
-def ndarray_from_gst_buffer(buf):
-    '''wrap ndarray around any gst buffer that is compatible'''
-    ## Inspect caps to determine ndarray shape and dtype.
-    cap = buf.get_caps()[0]
-    mimetype = cap.get_name().split('/')
-    if mimetype[0] == 'video':
-        shape = [cap['height'],cap['width']]
-        if mimetype[1] == 'x-raw-rgb':
-
-            bpp = cap['bpp']
-            bytespp = bpp / 8
-            rgb_depth = cap['depth']
-            if rgb_depth != 24:
-                raise ValueError('unsupported depth: %s.  must be 24' % (rgb_depth,))
-            if bpp == rgb_depth:
-                # RGB
-                channels = [None,None,None]
-            else:
-                # RGBA
-                channels = [None,None,None,None]
-
-            endianness = cap['endianness']
-            if endianness == 4321:
-                endianness = 'big'
-                mask_type = '>i4'
-                significant = slice(4-bytespp,4)
-            else:
-                endianness = 'little'
-                mask_type = '<i4'
-                significant = slice(0,bytespp)
-
-            ## byte position of R,G,B channels within each pixel
-            for channel in ('red','green','blue'):
-                mask = np.array([cap[channel+'_mask']], mask_type)
-                mask = mask.view(np.uint8) # split the bytes
-                mask = mask[significant] # reduce from 4 bytes to size of pixel
-                pos = mask.argmax() # assuming mask is all zeros and one 255
-                channels[pos] = channel
-            ## if 4th channel, it is alpha or undefined
-            if len(channels) == 4:
-                pos = channels.index(None)
-                if cap.has_key('alpha_mask'):
-                    channels[pos] = 'alpha'
-                else:
-                    channels[pos] = 'X'
-
-            ## make the dtype for a pixel
-            dtype = np.dtype({
-                'names': channels,
-                'formats': len(channels) * ['u1']
-            })
-
-        elif mimetype[1] == 'x-raw-yuv':
-            pass
-
-    bufarray = np.frombuffer(buf.data, dtype)
-    bufarray.shape = shape
-    return bufarray
+def ndarray_from_gst_buffer(buf, (height, width)):
+    data = buf.extract_dup(0, buf.get_size())
+    img = np.ndarray((height, width), buffer=data, dtype=np.uint8)
+    return img
 
 
 register_by_name(GST_OVERLAY_ML)

@@ -48,7 +48,9 @@ def main():
     pipeline.add(convert)
 
     # capture
-    cap1 = Gst.Caps.from_string("video/x-raw, format=NV12, width=640, height=480")
+    width = 300
+    height = 300
+    cap1 = Gst.Caps.from_string("video/x-raw, format=NV12, width={}, height={}".format(width, height))
     camerafilter1 = Gst.ElementFactory.make("capsfilter")
     camerafilter1.set_property("caps", cap1)
     pipeline.add(camerafilter1)
