@@ -132,9 +132,9 @@ def get_buffer_size(caps):
     return True, (width, height)
 
 
-def ndarray_from_gst_buffer(buf, (height, width)):
+def ndarray_from_gst_buffer(buf, size):
     data = buf.extract_dup(0, buf.get_size())
-    img = np.ndarray((height, width), buffer=data, dtype=np.uint8)
+    img = np.ndarray(size, buffer=data, dtype=np.uint8)
     return img
 
 
