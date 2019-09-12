@@ -12,49 +12,26 @@ GST_OVERLAY_ML = 'gstoverlayml'
 class GstOverlayML(GstBase.BaseTransform):
     CHANNELS = 3  # RGB
 
-    __gstmetadata__ = ("An example plugin of GstOverlayOpenCv",
-                       "gst-filter/gst_overlay_opencv.py",
-                       "gst.Element draw on image",
-                       "Taras at LifeStyleTransfer.com")
+    __gstmetadata__ = ("sample",
+                       "Transform",
+                       "sample",
+                       "sample")
 
     __gsttemplates__ = (Gst.PadTemplate.new("src",
                                             Gst.PadDirection.SRC,
                                             Gst.PadPresence.ALWAYS,
-                                            Gst.Caps.from_string("video/x-raw,format=RGB")),
+                                            Gst.Caps.new_any()),
                         Gst.PadTemplate.new("sink",
                                             Gst.PadDirection.SINK,
                                             Gst.PadPresence.ALWAYS,
-                                            Gst.Caps.from_string("video/x-raw,format=RGB")))
+                                            Gst.Caps.new_any()))
 
     def __init__(self):
         super(GstOverlayML, self).__init__()
-
-        # Overlay could be any of your objects as far as it implements __call__
-        # and returns numpy.ndarray
         self.overlay = None
 
     def do_transform_ip(self, inbuffer):
-        """
-            Implementation of simple filter.
-            All changes affected on Inbuffer
-            Read more:
-            https://gstreamer.freedesktop.org/data/doc/gstreamer/head/gstreamer-libs/html/GstBaseTransform.html
-        """
-#        return Gst.FlowReturn.OK
-
-        success, (width, height) = get_buffer_size(self.srcpad.get_current_caps())
-        if not success:
-            # https://lazka.github.io/pgi-docs/Gst-1.0/enums.html#Gst.FlowReturn
-            return Gst.FlowReturn.ERROR
-
-        with map_gst_buffer(inbuffer, Gst.MapFlags.READ) as mapped:
-            frame = np.ndarray((height, width, self.CHANNELS), buffer=mapped, dtype=np.uint8)
-
-        overlay = self.overlay()
-        x = width - overlay.shape[1]
-        y = height - overlay.shape[0]
-        draw_image(frame, overlay, x, y)
-
+        Gst.info("timestamp(buffer):%s" % (Gst.TIME_ARGS(inbuffer.pts)))
         return Gst.FlowReturn.OK
 
 
@@ -101,33 +78,6 @@ def get_buffer_size(caps):
     if not success:
         return False, (0, 0)
     return True, (width, height)
-
-
-@contextmanager
-def map_gst_buffer(pbuffer, flags):
-    """
-        Map Gst.Buffer for Read/Write
-        :param pbuffer: https://lazka.github.io/pgi-docs/Gst-1.0/classes/Buffer.html
-        :type pbuffer: Gst.Buffer
-        :param flags: https://lazka.github.io/pgi-docs/Gst-1.0/flags.html#Gst.MapFlags
-        :type flags: Gst.MapFlags
-    """
-    if pbuffer is None:
-        raise TypeError("Cannot pass NULL to _map_gst_buffer")
-
-    ptr = hash(pbuffer)  # Obraining pointer to buffer
-    if flags & Gst.MapFlags.WRITE and _libgst.gst_mini_object_is_writable(ptr) == 0:
-        raise ValueError("Writable array requested but buffer is not writeable")
-
-    mapping = _GstMapInfo()
-    success = _libgst.gst_buffer_map(ptr, mapping, flags)
-    if not success:
-        raise RuntimeError("Couldn't map buffer")
-    try:
-        yield cast(
-            mapping.data, POINTER(c_byte * mapping.size)).contents
-    finally:
-        _libgst.gst_buffer_unmap(ptr, mapping)
 
 
 register_by_name(GST_OVERLAY_ML)
