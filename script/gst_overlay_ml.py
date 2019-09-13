@@ -79,6 +79,11 @@ def recreate_image_with_bounding_boxes(image_array, res):
         if score < 0.5:
             continue
 
+        # check label (only person label is added)
+        # TODO : label id should be got from coco.py
+        if label != 1:
+            continue
+
         # print each data
         box = boxes[0][j]
         print("  ", cl_id, label, score, box)
