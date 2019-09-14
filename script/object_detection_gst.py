@@ -12,89 +12,119 @@ Gst.init(sys.argv)
 import gst_overlay_ml
 
 
-def on_message(bus, message, loop):
-    mtype = message.type
-    """
-        Gstreamer Message Types and how to parse
-        https://lazka.github.io/pgi-docs/Gst-1.0/flags.html#Gst.MessageType
-    """
-    if mtype == Gst.MessageType.EOS:
-        print("End of stream")
-        
-    elif mtype == Gst.MessageType.ERROR:
-        err, debug = message.parse_error()
-        print(err, debug)     
-    elif mtype == Gst.MessageType.WARNING:
-        err, debug = message.parse_warning()
-        print(err, debug)             
-        
-    return True
+class GstConfig:
+    def __init__(self):
+        # source information
+        self.src_name = "my_video_test_src"
+        self.src_type = "v4l2src"
+        self.src_extract_property = {
+            "device": "/dev/video0",
+            "io-mode": 4
+        }
+
+        # capture information
+        self.cap_video_type = "video/x-raw"
+        self.cap_extract_property = {
+            "format": "NV12",
+            "witdh": "640",
+            "height": "480"
+        }
+
+        # sink information
+        self.sink_type = "autovideosink"
 
 
-def main():
-    # Gst.Pipeline https://lazka.github.io/pgi-docs/Gst-1.0/classes/Pipeline.html
-    pipeline = Gst.Pipeline()
+class ObjectDetectionGst:
 
-    # Creates element by name
-    # https://lazka.github.io/pgi-docs/Gst-1.0/classes/ElementFactory.html#Gst.ElementFactory.make
-    src_name = "my_video_test_src"
-    src = Gst.ElementFactory.make("v4l2src", "my_video_test_src")
-    src.set_property("device", "/dev/video0")
-    src.set_property("io-mode", 4)
-    pipeline.add(src)
+    def __init__(self, config):
+        self.config = config
 
-    # add converter
-    convert = Gst.ElementFactory.make("videoconvert")
-    pipeline.add(convert)
+        # Gst.Pipeline https://lazka.github.io/pgi-docs/Gst-1.0/classes/Pipeline.html
+        self.pipeline = Gst.Pipeline()
 
-    # capture
-    width = 300
-    height = 300
-    cap1 = Gst.Caps.from_string("video/x-raw, format=NV12, width={}, height={}".format(width, height))
-    camerafilter1 = Gst.ElementFactory.make("capsfilter")
-    camerafilter1.set_property("caps", cap1)
-    pipeline.add(camerafilter1)
+    def setup(self):
+        # Gst.Pipeline https://lazka.github.io/pgi-docs/Gst-1.0/classes/Pipeline.html
+        pipeline = Gst.Pipeline()
 
-    # add ml function
-    ml = Gst.ElementFactory.make("gstoverlayml")
-    pipeline.add(ml)
+        # Creates element by name
+        # https://lazka.github.io/pgi-docs/Gst-1.0/classes/ElementFactory.html#Gst.ElementFactory.make
+        src = Gst.ElementFactory.make(self.config.src_type, self.config.src_name)
+        for k, v in self.config.src_extract_property.items():
+            src.set_property(k, v)
+        pipeline.add(src)
 
-    # add sink
-    sink = Gst.ElementFactory.make("autovideosink")
-    pipeline.add(sink)
+        # add converter
+        convert = Gst.ElementFactory.make("videoconvert")
+        pipeline.add(convert)
 
-    # create link
-    src.link(convert)
-    convert.link(camerafilter1)
-    camerafilter1.link(ml)
-    ml.link(sink)
+        # add capture
+        capture_string = self.config.cap_video_type
+        for k, v in self.config.cap_extract_property.items():
+            capture_string = capture_string + ", {}={}".format(k, v)
+        cap = Gst.Caps.from_string(capture_string)
+        camerafilter = Gst.ElementFactory.make("capsfilter")
+        camerafilter.set_property("caps", cap)
+        pipeline.add(camerafilter)
 
-    assert src == pipeline.get_by_name(src_name)
+        # add ml function
+        ml = Gst.ElementFactory.make("gstoverlayml")
+        pipeline.add(ml)
 
-    # https://lazka.github.io/pgi-docs/Gst-1.0/classes/Bus.html
-    bus = pipeline.get_bus()
+        # add sink
+        sink = Gst.ElementFactory.make(self.config.sink_type)
+        pipeline.add(sink)
 
-    # allow bus to emit messages to main thread
-    bus.add_signal_watch()
+        # create link
+        src.link(convert)
+        convert.link(camerafilter)
+        camerafilter.link(ml)
+        ml.link(sink)
 
-    # Add handler to specific signal
-    # https://lazka.github.io/pgi-docs/GObject-2.0/classes/Object.html#GObject.Object.connect
-    bus.connect("message", on_message, None)
+        # check source
+        assert src == pipeline.get_by_name(self.config.src_name)
 
-    # Start pipeline
-    pipeline.set_state(Gst.State.PLAYING)
+        # https://lazka.github.io/pgi-docs/Gst-1.0/classes/Bus.html
+        bus = pipeline.get_bus()
 
-    # Init GObject loop to handle Gstreamer Bus Events
-    loop = GObject.MainLoop()
+        # allow bus to emit messages to main thread
+        bus.add_signal_watch()
 
-    try:
-        loop.run()
-    except:
-        traceback.print_exc()
+        # Add handler to specific signal
+        # https://lazka.github.io/pgi-docs/GObject-2.0/classes/Object.html#GObject.Object.connect
+        bus.connect("message", self._on_message, None)
 
-    # Stop Pipeline
-    pipeline.set_state(Gst.State.NULL)
+        # set pipeline
+        self.pipeline = pipeline
 
+    def start_play(self):
+        # Start pipeline
+        self.pipeline.set_state(Gst.State.PLAYING)
 
-if __name__ == "__main__":
-    main()
+        # Init GObject loop to handle Gstreamer Bus Events
+        loop = GObject.MainLoop()
+
+        try:
+            loop.run()
+        except:
+            traceback.print_exc()
+
+        # Stop Pipeline
+        self.pipeline.set_state(Gst.State.NULL)
+
+    def _on_message(self, bus, message, loop):
+        mtype = message.type
+        """
+            Gstreamer Message Types and how to parse
+            https://lazka.github.io/pgi-docs/Gst-1.0/flags.html#Gst.MessageType
+        """
+        if mtype == Gst.MessageType.EOS:
+            print("End of stream")
+
+        elif mtype == Gst.MessageType.ERROR:
+            err, debug = message.parse_error()
+            print(err, debug)
+        elif mtype == Gst.MessageType.WARNING:
+            err, debug = message.parse_warning()
+            print(err, debug)
+
+        return True
