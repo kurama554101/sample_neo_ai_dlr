@@ -13,7 +13,8 @@ class TfModelZooType(Enum):
     SSD_MOBILE_NET_V2_COCO = \
         {
             "url": "http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz",
-            "input_tensor_name": "import/image_tensor:0"  # TODO : should be get from tensorflow graph
+            "input_tensor_name": "import/image_tensor:0",  # TODO : should be get from tensorflow graph
+            "input_size": (300, 300)
         }
 
 

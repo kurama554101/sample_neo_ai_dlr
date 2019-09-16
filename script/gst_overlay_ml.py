@@ -12,6 +12,7 @@ from gi.repository import Gst, GObject, GstBase
 
 
 GST_OVERLAY_ML = 'gstoverlayml'
+INPUT_SIZE = (640, 480)  # TODO : should set from outer
 
 
 # https://lazka.github.io/pgi-docs/GstBase-1.0/classes/BaseTransform.html
@@ -48,19 +49,24 @@ class GstOverlayML(GstBase.BaseTransform):
 
         # set input param
         self._input_tensor_name = model_type.value["input_tensor_name"]
-        self._size = (300, 300)  # TODO : set size from outer
+        self._size = model_type.value["input_size"]
 
     def do_transform_ip(self, inbuffer):
         # convert inbuffer to ndarray
         # data format is HWC? (not contain N)
         np_buffer = ndarray_from_gst_buffer(inbuffer, self._size)
 
+        # convert display size from (640, 480) to (300, 300)
+        img = Image.fromarray(np_buffer)
+        img_resized = img.resize(self._size)
+
         # get bounding box information
         # need to convert data format from CHW to NCHW
-        input_tensor = np.array([np_buffer])
+        input_tensor = np.array([img_resized])
         res = self._model.run({self._input_tensor_name: input_tensor})
 
         # recreate image to add bounding box
+        input_tensor = np.array([np_buffer])
         recreate_image_with_bounding_boxes(input_tensor, res)
         inbuffer = input_tensor[0]
 
