@@ -54,15 +54,17 @@ class GstOverlayML(GstBase.BaseTransform):
     def do_transform_ip(self, inbuffer):
         # convert inbuffer to ndarray
         # data format is HWC? (not contain N)
-        np_buffer = ndarray_from_gst_buffer(inbuffer, self._size)
+        np_buffer = ndarray_from_gst_buffer(inbuffer, INPUT_SIZE)
 
         # convert display size from (640, 480) to (300, 300)
         img = Image.fromarray(np_buffer)
         img_resized = img.resize(self._size)
+        np_buffer_resized = np.asarray(img_resized)
 
         # get bounding box information
         # need to convert data format from CHW to NCHW
-        input_tensor = np.array([img_resized])
+        input_tensor = np.array([np_buffer_resized])
+        print(input_tensor.shape)
         res = self._model.run({self._input_tensor_name: input_tensor})
 
         # recreate image to add bounding box
@@ -143,9 +145,11 @@ def get_buffer_size(caps):
     return True, (width, height)
 
 
-def ndarray_from_gst_buffer(buf, size):
-    data = buf.extract_dup(0, buf.get_size())
-    img = np.ndarray(size, buffer=data, dtype=np.uint8)
+def ndarray_from_gst_buffer(buf, input_size):
+    size = buf.get_size()
+    data = buf.extract_dup(0, size)
+    img = np.ndarray((input_size[0], input_size[1], 4), buffer=data, dtype=np.uint8)
+    img = img[:,:,0:3]
     return img
 
 

@@ -25,7 +25,6 @@ class GstConfig:
         # capture information
         self.cap_video_type = "video/x-raw"
         self.cap_extract_property = {
-            "format": "NV12",
             "witdh": "640",
             "height": "480"
         }
@@ -77,8 +76,9 @@ class ObjectDetectionGst:
         # create link
         src.link(convert)
         convert.link(camerafilter)
-        camerafilter.link(ml)
-        ml.link(sink)
+        #camerafilter.link(ml)
+        #ml.link(sink)
+        camerafilter.link(sink)
 
         # check source
         assert src == pipeline.get_by_name(self.config.src_name)

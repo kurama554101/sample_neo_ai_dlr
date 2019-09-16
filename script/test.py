@@ -34,15 +34,29 @@ def on_message(bus, message, loop):
 def test():
     pipeline = Gst.Pipeline()
 
+    #src = Gst.ElementFactory.make("avfvideosrc")
     src = Gst.ElementFactory.make("videotestsrc")
     pipeline.add(src)
-    print(type(src))
-    print(type(gst_overlay_ml.GstOverlayML()))
+
+    convert = Gst.ElementFactory.make("videoconvert")
+    pipeline.add(convert)
+
+    capture_string = "video/x-raw, width=640, height=480"
+    cap = Gst.Caps.from_string(capture_string)
+    camerafilter = Gst.ElementFactory.make("capsfilter")
+    camerafilter.set_property("caps", cap)
+    pipeline.add(camerafilter)
+
+    ml = Gst.ElementFactory.make("gstoverlayml")
+    pipeline.add(ml)
 
     sink = Gst.ElementFactory.make("gtksink")
     pipeline.add(sink)
 
-    src.link(sink)
+    src.link(convert)
+    convert.link(camerafilter)
+    camerafilter.link(ml)
+    ml.link(sink)
 
     bus = pipeline.get_bus()
     bus.add_signal_watch()
@@ -114,4 +128,4 @@ def test3():
 
 
 if __name__ == "__main__":
-    test3()
+    test()
