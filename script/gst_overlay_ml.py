@@ -69,8 +69,12 @@ class GstOverlayML(GstBase.BaseTransform):
         # recreate image to add bounding box
         recreate_image_with_bounding_boxes(np_buffer, res)
 
-        # TODO : need to convert from np.array to GstBuffer
-        # inbuffer = input_tensor[0]
+        # need to convert from np.array to GstBuffer
+        outbytes = np_buffer.tobytes()
+        outbuffer = Gst.Buffer.new_wrapped(outbytes)
+        # TODO : need to add alpha channel to outbuffer(3channel -> 4channel)
+        #inbuffer.remove_all_memory()
+        #inbuffer = outbuffer
         return Gst.FlowReturn.OK
 
 
