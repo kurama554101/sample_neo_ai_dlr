@@ -64,14 +64,13 @@ class GstOverlayML(GstBase.BaseTransform):
         # get bounding box information
         # need to convert data format from CHW to NCHW
         input_tensor = np.array([np_buffer_resized])
-        print(input_tensor.shape)
         res = self._model.run({self._input_tensor_name: input_tensor})
 
         # recreate image to add bounding box
-        input_tensor = np.array([np_buffer])
-        recreate_image_with_bounding_boxes(input_tensor, res)
-        inbuffer = input_tensor[0]
+        recreate_image_with_bounding_boxes(np_buffer, res)
 
+        # TODO : need to convert from np.array to GstBuffer
+        # inbuffer = input_tensor[0]
         return Gst.FlowReturn.OK
 
 
@@ -97,8 +96,9 @@ def recreate_image_with_bounding_boxes(image_array, res):
         print("  ", cl_id, label, score, box)
         target_boxes.append(box)
 
-    # recreate image with bounding boxes
-    visualization_utils.draw_bounding_boxes_on_image_array(image_array, np.array(target_boxes))
+    # recreate image with bounding boxes if box is not empty
+    if len(target_boxes) != 0:
+        visualization_utils.draw_bounding_boxes_on_image_array(image_array, np.array(target_boxes))
 
 
 def register(plugin):
