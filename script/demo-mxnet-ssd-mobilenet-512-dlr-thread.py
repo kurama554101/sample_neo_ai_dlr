@@ -41,53 +41,17 @@ class_names = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "
                "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant",
                "sheep", "sofa", "train", "tvmonitor"]
 
-######################################################################
-# Create TVM runtime and do inference
 
-# Build TVM runtime
-device = 'opencl'
-m = dlr.DLRModel(model_path, device)
+def get_result(model, image):
+    orig_img, img_data = open_and_norm_image(image)
+    input_data = img_data.astype(dtype)
+
+    m_out = model.run(input_data)
+    out = m_out[0][0]
+    return out
 
 
-
-cap = cv2.VideoCapture(8)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
-
-def thread_job():
-    device = 'opencl'
-    m = dlr.DLRModel(model_path, device)
-    while True:
-        ret, test_image = cap.read()
-        if(ret == False):
-            continue
-        orig_img, img_data = open_and_norm_image(test_image)
-        input_data = img_data.astype(dtype)
-
-        m_out =  m.run(input_data)
-        out = m_out[0][0]
-        i = 0
-        print('------------')
-        for det in out:
-            cid = int(det[0])
-            if cid < 0:
-                continue
-            score = det[1]
-            if score < 0.5:
-                continue
-            i += 1
-            if(i>10):
-                break
-            print(i, class_names[cid], det)
-        print('---end---------')
-        if(i>10):
-            continue
-        global result
-        result = out
-        #cv2.imshow('Single-Threaded Detection',test_image)
-
-def display(frame, out, thresh=0.5):
-    pens = dict()
+def display(model, frame, out, thresh=0.5):
     for det in out:
         cid = int(det[0])
         if cid < 0:
@@ -105,20 +69,30 @@ def display(frame, out, thresh=0.5):
     cv2.imshow('Single-Threaded Detection',frame)
 
 
-added_thread = threading.Thread(target=thread_job)
-    # 執行 thread
-added_thread.start() 
+######################################################################
+# Create TVM runtime and do inference
 
+# Build TVM runtime
+device = 'opencl'
+m = dlr.DLRModel(model_path, device)
 
+# get capture
+cap = cv2.VideoCapture(8)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+
+# start loop
 while True:
+    # read video capture
     ret, test_image = cap.read()
     if(ret == False):
         continue
-    #print(ret)
-    #orig_img, img_data = open_and_norm_image(test_image)
-    #cv2.imshow('Single-Threaded Detection',test_image)
-    global result
-    display(test_image, result, 0.5)
+
+    # get result
+    out = get_result(m, test_image)
+
+    # display image with bounding boxes
+    display(m, test_image, result, 0.5)
     if cv2.waitKey(10) & 0xFF == ord('q'):
         break
 
