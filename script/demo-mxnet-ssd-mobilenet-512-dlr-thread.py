@@ -15,7 +15,7 @@ dshape = (1, 3, 512, 512)
 dtype = "float32"
 w = 1280
 h = 720
-model_path = "models/mxnet-ssd-mobilenet-512"
+model_path = "model/mxnet-ssd-mobilenet-512"
 class_names = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair",
                "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant",
                "sheep", "sofa", "train", "tvmonitor"]
