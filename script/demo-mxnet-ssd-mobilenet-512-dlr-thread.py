@@ -63,7 +63,8 @@ device = 'opencl'
 m = dlr.DLRModel(model_path, device)
 
 # get capture
-cap = cv2.VideoCapture(8)
+#cap = cv2.VideoCapture(8)
+cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
 

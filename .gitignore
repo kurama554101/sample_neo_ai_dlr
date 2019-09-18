@@ -5,3 +5,6 @@ __pycache__/
 
 # ignore model files
 script/model/*
+
+# ignore venv
+venv/*
