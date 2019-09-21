@@ -148,15 +148,14 @@ def get_input_data(model_define, input_tensor):
 
 
 def open_and_norm_image(frame, input_size, transpose_tuple=None):
-    orig_img = frame
-    img = cv2.resize(orig_img, input_size)
+    img = cv2.resize(frame, input_size)
     img = img[:, :, (2, 1, 0)].astype(np.float32)
     img -= np.array([123, 117, 104])
 
-    # need to transpose if model type is MXNet
+    # transpose if needed
     img = tranpose_if_needed(img, transpose_tuple)
     img = np.expand_dims(img, axis=0)
-    return orig_img, img
+    return img
 
 
 def tranpose_if_needed(image_array, transpose_tuple=None):
