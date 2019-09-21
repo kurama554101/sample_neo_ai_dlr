@@ -39,6 +39,10 @@ class AbstractModelLoader:
     def get_model(self):
         pass
 
+    @abstractmethod
+    def _check_model_path(self):
+        pass
+
 
 class RemoteArchiveModelLoader(AbstractModelLoader):
     __metaclass__ = ABCMeta
@@ -50,23 +54,34 @@ class RemoteArchiveModelLoader(AbstractModelLoader):
 
     def setup(self):
         # check model path
-        zip_file_name = os.path.basename(self._url)
-        archive_path = os.path.join(self._root_path, zip_file_name)
-        self._model_root_path = util.get_extract_dir_path(archive_path, self._root_path)
-        if os.path.exists(self._model_root_path):
+        if self._check_model_path():
             print("{} path is already exist!".format(self._model_root_path))
             return
 
         # download archive model
+        zip_file_name = self.__get_zip_filename()
         util.download(self._url, os.path.join(self._root_path, zip_file_name))
 
         # extract archive
+        archive_path = self.__get_archive_path()
         util.extract_all(archive_path, self._root_path)
         os.remove(archive_path)
 
     @abstractmethod
     def get_model(self):
         pass
+
+    def _check_model_path(self):
+        archive_path = self.__get_archive_path()
+        self._model_root_path = util.get_extract_dir_path(archive_path, self._root_path)
+        return os.path.exists(self._model_root_path)
+
+    def __get_archive_path(self):
+        zip_file_name = self.__get_zip_filename()
+        return os.path.join(self._root_path, zip_file_name)
+
+    def __get_zip_filename(self):
+        return os.path.basename(self._url)
 
 
 class TfModelZooLoader(RemoteArchiveModelLoader):
@@ -78,3 +93,25 @@ class TfModelZooLoader(RemoteArchiveModelLoader):
         model_file = os.path.join(self._model_root_path, "frozen_inference_graph.pb")
         model_path_map = {"model_file": model_file}
         return ModelInfo(model_type, model_path_map)
+
+
+class RemoteModelLoader(AbstractModelLoader):
+    def __init__(self, root_path, url_list):
+        super(RemoteModelLoader, self).__init__(root_path)
+        self._url_list = url_list
+
+    def setup(self):
+        # TODO : imp
+        pass
+
+    def get_model(self):
+        # TODO : imp
+        pass
+
+    def _check_model_path(self):
+        # TODO : imp
+        pass
+
+    def __get_model_root_path(self):
+        # TODO : imp
+        pass
