@@ -29,8 +29,6 @@ def convert_display_type(arg_display_type):
 
 
 # set parameter
-# ms = lambda: int(round(time.time() * 1000))
-# test_image = "dog.jpg"
 class_names = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair",
                "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant",
                "sheep", "sofa", "train", "tvmonitor"]
