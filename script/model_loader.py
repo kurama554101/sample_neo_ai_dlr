@@ -32,8 +32,16 @@ class ModelDefine(Enum):
                 "https://s3.us-east-2.amazonaws.com/dlc-models/aisage/mxnet-ssd-mobilenet-512/model.json",
                 "https://s3.us-east-2.amazonaws.com/dlc-models/aisage/mxnet-ssd-mobilenet-512/model.so"
             ],
-            "input_size": (512, 512)
+            "input_size": (512, 512),
+            "img_transpose": (2, 0, 1)
         }
+
+
+def get_transpose_tuple(model_define):
+    if "img_transpose" in model_define:
+        return model_define["img_transpose"]
+    else:
+        return None
 
 
 class ModelInfo:

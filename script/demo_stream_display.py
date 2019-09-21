@@ -6,7 +6,7 @@ import time
 import cv2
 import dlr
 from argument_parser_util import create_argument_parser, convert_model_define
-from model_loader import ModelLoaderFactory
+from model_loader import ModelLoaderFactory, get_transpose_tuple
 from enum import Enum
 import util
 
@@ -34,9 +34,10 @@ class_names = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "
                "sheep", "sofa", "train", "tvmonitor"]
 
 
-def get_result(model, model_define, model_type, image, input_size):
+def get_result(model, model_define, image, input_size):
     dtype = "float32"
-    orig_img, img_data = util.open_and_norm_image(image, input_size)
+    transpose_tuple = get_transpose_tuple(model_define)
+    orig_img, img_data = util.open_and_norm_image(image, input_size, transpose_tuple)
     input_tensor = img_data.astype(dtype)
     input_data = util.get_input_data(model_define, input_tensor)
     m_out = model.run(input_data)
@@ -72,11 +73,10 @@ def prepare_model(args):
     loader = ModelLoaderFactory.get_loader(model_define, model_root_path)
     loader.setup()
     model_path = loader.get_model_path()
-    model_info = loader.get_model_detail()
 
     # create Deep Learning Runtime
     target = args.target_device
-    return dlr.DLRModel(model_path, target), model_info
+    return dlr.DLRModel(model_path, target)
 
 
 def main():
@@ -86,7 +86,7 @@ def main():
     args = parser.parse_args()
 
     # get model
-    m, model_info = prepare_model(args)
+    m = prepare_model(args)
 
     # get capture
     cap = cv2.VideoCapture(0)
@@ -96,7 +96,6 @@ def main():
 
     # get parameter
     model_define = convert_model_define(args.model_type)
-    model_type = model_info.model_type
     input_size = model_define["input_size"]
 
     # start loop
@@ -107,7 +106,7 @@ def main():
             continue
 
         # get result
-        out = get_result(m, model_define, model_type, capture_image, input_size)
+        out = get_result(m, model_define, capture_image, input_size)
 
         # display image with bounding boxes
         display(capture_image, display_type[0], display_type[1], out, 0.5)

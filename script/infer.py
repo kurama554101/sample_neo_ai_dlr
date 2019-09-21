@@ -1,5 +1,5 @@
 import dlr
-from model_loader import ModelLoaderFactory, ModelDefine
+from model_loader import ModelLoaderFactory, get_transpose_tuple
 import util
 from argument_parser_util import create_argument_parser, convert_model_define
 
@@ -17,7 +17,6 @@ def main():
     loader = ModelLoaderFactory.get_loader(model_define, model_root_path)
     loader.setup()
     model_path = loader.get_model_path()
-    model_info = loader.get_model_detail()
 
     # create Deep Learning Runtime
     target = args.target_device
@@ -26,7 +25,8 @@ def main():
     # get input data
     input_files = [args.input_file_path]
     image_size = model_define["input_size"]
-    input_tensor = util.get_ndarray_from_image(input_files, image_size, model_info.model_type)
+    transpose_tuple = get_transpose_tuple(model_define)
+    input_tensor = util.get_ndarray_from_image(input_files, image_size, transpose_tuple)
     input_data = util.get_input_data(model_define, input_tensor)
 
     # run inference
