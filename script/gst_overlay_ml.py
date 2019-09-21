@@ -37,7 +37,7 @@ class GstOverlayML(GstBase.BaseTransform):
         super(GstOverlayML, self).__init__()
 
         # load model
-        model_type = ModelDefine.SSD_MOBILE_NET_V2_COCO
+        model_type = ModelDefine.TF_SSD_MOBILE_NET_V2_COCO
         model_root_path = "model"
         loader = TfModelZooLoader(model_root_path, model_type.value["url"])
         loader.setup()

@@ -58,7 +58,7 @@ def recreate_images_with_bounding_boxes(inp_files, input_tensor, res):
 
 def main():
     # set model type
-    model_type = ModelDefine.SSD_MOBILE_NET_V2_COCO
+    model_type = ModelDefine.TF_SSD_MOBILE_NET_V2_COCO
 
     # load model data
     model_root_path = "model"

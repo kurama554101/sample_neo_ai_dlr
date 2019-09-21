@@ -16,7 +16,7 @@ class ModelLoaderType(Enum):
 
 
 class ModelDefine(Enum):
-    SSD_MOBILE_NET_V2_COCO = \
+    TF_SSD_MOBILE_NET_V2_COCO = \
         {
             "loader_type": ModelLoaderType.TF_ZOO_LOADER,
             "url": "http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz",
