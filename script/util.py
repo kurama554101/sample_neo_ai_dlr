@@ -6,6 +6,8 @@ from object_detection.utils import visualization_utils
 from PIL import Image
 from coco import coco
 import psutil
+import cv2
+from model_loader import ModelType
 
 
 def download(url, path, overwrite=False):
@@ -116,7 +118,7 @@ def print_mem_usage():
     print("Memory RSS: {:,}".format(process.memory_info().rss))
 
 
-def get_ndarray_from_image(img_files, out_size):
+def get_ndarray_from_image(img_files, out_size, model_type):
     """
     get numpy.array from image with resizing.
 
@@ -125,12 +127,15 @@ def get_ndarray_from_image(img_files, out_size):
     :param out_size : tuple
         out size tuple of image array.
         ex) (300, 300)
+    :model_type : model_loader.ModelType
+        model type
     :return: numpy.array
     """
 
     res = []
     for f in img_files:
         img = np.array(Image.open(f).resize(out_size))
+        img = tranpose_if_needed(img, model_type)
         res.append(img)
     return np.array(res)
 
@@ -141,3 +146,22 @@ def get_input_data(model_define, input_tensor):
     else:
         input_data = input_tensor
     return input_data
+
+
+def open_and_norm_image(frame, input_size, model_type):
+    orig_img = frame
+    img = cv2.resize(orig_img, input_size)
+    img = img[:, :, (2, 1, 0)].astype(np.float32)
+    img -= np.array([123, 117, 104])
+
+    # need to transpose if model type is MXNet
+    img = tranpose_if_needed(img, model_type)
+    img = np.expand_dims(img, axis=0)
+    return orig_img, img
+
+
+def tranpose_if_needed(image_array, model_type):
+    # need to transpose if model type is MXNet
+    if model_type == ModelType.MXNET:
+        image_array = np.transpose(np.array(image_array), (2, 0, 1))
+    return image_array

@@ -34,9 +34,9 @@ class_names = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "
                "sheep", "sofa", "train", "tvmonitor"]
 
 
-def get_result(model, model_define, image, input_size):
+def get_result(model, model_define, model_type, image, input_size):
     dtype = "float32"
-    orig_img, img_data = open_and_norm_image(image, input_size)
+    orig_img, img_data = util.open_and_norm_image(image, input_size)
     input_tensor = img_data.astype(dtype)
     input_data = util.get_input_data(model_define, input_tensor)
     m_out = model.run(input_data)
@@ -63,17 +63,6 @@ def display(frame, w, h, out, thresh=0.5):
     cv2.imshow('Single-Threaded Detection', frame)
 
 
-# Preprocess image
-def open_and_norm_image(frame, input_size):
-    orig_img = frame
-    img = cv2.resize(orig_img, input_size)
-    img = img[:, :, (2, 1, 0)].astype(np.float32)
-    img -= np.array([123, 117, 104])
-    img = np.transpose(np.array(img), (2, 0, 1))
-    img = np.expand_dims(img, axis=0)
-    return orig_img, img
-
-
 def prepare_model(args):
     # set model type
     model_define = convert_model_define(args.model_type)
@@ -83,10 +72,11 @@ def prepare_model(args):
     loader = ModelLoaderFactory.get_loader(model_define, model_root_path)
     loader.setup()
     model_path = loader.get_model_path()
+    model_info = loader.get_model_detail()
 
     # create Deep Learning Runtime
     target = args.target_device
-    return dlr.DLRModel(model_path, target)
+    return dlr.DLRModel(model_path, target), model_info
 
 
 def main():
@@ -96,7 +86,7 @@ def main():
     args = parser.parse_args()
 
     # get model
-    m = prepare_model(args)
+    m, model_info = prepare_model(args)
 
     # get capture
     cap = cv2.VideoCapture(0)
@@ -106,6 +96,7 @@ def main():
 
     # get parameter
     model_define = convert_model_define(args.model_type)
+    model_type = model_info.model_type
     input_size = model_define["input_size"]
 
     # start loop
@@ -116,7 +107,7 @@ def main():
             continue
 
         # get result
-        out = get_result(m, model_define, capture_image, input_size)
+        out = get_result(m, model_define, model_type, capture_image, input_size)
 
         # display image with bounding boxes
         display(capture_image, display_type[0], display_type[1], out, 0.5)
