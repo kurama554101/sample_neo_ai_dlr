@@ -26,7 +26,7 @@ class ModelDefine(Enum):
     MXNET_SSD_MOBILE_NET_512 = \
         {
             "loader_type": ModelLoaderType.MXNET_REMOTE_LOADER,
-            "model_dir_name": "mxnet_ssd_mobilenet_512",
+            "model_dir_name": "mxnet-ssd-mobilenet-512",
             "url_list": [
                 "https://s3.us-east-2.amazonaws.com/dlc-models/aisage/mxnet-ssd-mobilenet-512/model.params",
                 "https://s3.us-east-2.amazonaws.com/dlc-models/aisage/mxnet-ssd-mobilenet-512/model.json",
