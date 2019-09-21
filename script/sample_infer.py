@@ -1,7 +1,7 @@
 import dlr
 import psutil
 import os
-from model_loader import TfModelZooLoader, TfModelZooType
+from model_loader import TfModelZooLoader, ModelDefine
 import util
 from PIL import Image
 import numpy as np
@@ -58,13 +58,13 @@ def recreate_images_with_bounding_boxes(inp_files, input_tensor, res):
 
 def main():
     # set model type
-    model_type = TfModelZooType.SSD_MOBILE_NET_V2_COCO
+    model_type = ModelDefine.SSD_MOBILE_NET_V2_COCO
 
     # load model data
     model_root_path = "model"
     loader = TfModelZooLoader(model_root_path, model_type.value["url"])
     loader.setup()
-    model_info = loader.get_model()
+    model_info = loader.get_model_detail()
     model_path = model_info.model_path_map["model_file"]
 
     # create Deep Learning Runtime

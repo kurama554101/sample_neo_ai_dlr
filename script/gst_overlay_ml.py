@@ -3,7 +3,7 @@ import numpy as np
 from coco import coco
 from object_detection.utils import visualization_utils
 from PIL import Image
-from model_loader import TfModelZooLoader, TfModelZooType
+from model_loader import TfModelZooLoader, ModelDefine
 import dlr
 
 gi.require_version('Gst', '1.0')
@@ -37,11 +37,11 @@ class GstOverlayML(GstBase.BaseTransform):
         super(GstOverlayML, self).__init__()
 
         # load model
-        model_type = TfModelZooType.SSD_MOBILE_NET_V2_COCO
+        model_type = ModelDefine.SSD_MOBILE_NET_V2_COCO
         model_root_path = "model"
         loader = TfModelZooLoader(model_root_path, model_type.value["url"])
         loader.setup()
-        model_info = loader.get_model()
+        model_info = loader.get_model_detail()
         model_path = model_info.model_path_map["model_file"]
 
         # create DLR model
