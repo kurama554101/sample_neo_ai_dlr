@@ -26,10 +26,7 @@ def main():
     input_files = [args.input_file_path]
     image_size = model_define["input_size"]
     input_tensor = util.get_ndarray_from_image(input_files, image_size)
-    if "input_tensor_name" in model_define.keys():
-        input_data = {model_define["input_tensor_name"]: input_tensor}
-    else:
-        input_data = input_tensor
+    input_data = util.get_input_data(model_define, input_tensor)
 
     # run inference
     res = m.run(input_data)

@@ -133,3 +133,11 @@ def get_ndarray_from_image(img_files, out_size):
         img = np.array(Image.open(f).resize(out_size))
         res.append(img)
     return np.array(res)
+
+
+def get_input_data(model_define, input_tensor):
+    if "input_tensor_name" in model_define.keys():
+        input_data = {model_define["input_tensor_name"]: input_tensor}
+    else:
+        input_data = input_tensor
+    return input_data

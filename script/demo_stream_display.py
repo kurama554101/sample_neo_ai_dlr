@@ -8,6 +8,7 @@ import dlr
 from argument_parser_util import create_argument_parser, convert_model_define
 from model_loader import ModelLoaderFactory
 from enum import Enum
+import util
 
 
 class DisplayType(Enum):
@@ -35,10 +36,11 @@ class_names = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "
                "sheep", "sofa", "train", "tvmonitor"]
 
 
-def get_result(model, image, input_size):
+def get_result(model, model_define, image, input_size):
     dtype = "float32"
     orig_img, img_data = open_and_norm_image(image, input_size)
-    input_data = img_data.astype(dtype)
+    input_tensor = img_data.astype(dtype)
+    input_data = util.get_input_data(model_define, input_tensor)
     m_out = model.run(input_data)
     return m_out[0][0]
 
