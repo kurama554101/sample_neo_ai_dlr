@@ -45,7 +45,7 @@ def get_result(model, model_define, image, input_size):
     return m_out[0][0]
 
 
-def display(w, h, frame, out, thresh=0.5):
+def display(frame, w, h, out, thresh=0.5):
     for det in out:
         cid = int(det[0])
         if cid < 0:
@@ -113,15 +113,15 @@ def main():
     # start loop
     while True:
         # read video capture
-        ret, test_image = cap.read()
+        ret, capture_image = cap.read()
         if (ret == False):
             continue
 
         # get result
-        out = get_result(m, test_image, input_size)
+        out = get_result(m, model_define, capture_image, input_size)
 
         # display image with bounding boxes
-        display(test_image, display_type[0], display_type[1], out, 0.5)
+        display(capture_image, display_type[0], display_type[1], out, 0.5)
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
 
