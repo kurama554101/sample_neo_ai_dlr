@@ -117,7 +117,7 @@ def print_mem_usage():
     print("Memory RSS: {:,}".format(process.memory_info().rss))
 
 
-def get_ndarray_from_image(img_files, out_size, transpose_tuple=None):
+def get_ndarray_from_imagefiles(img_files, out_size, transpose_tuple=None):
     """
     get numpy.array from image with resizing.
 
@@ -147,15 +147,28 @@ def get_input_data(model_define, input_tensor):
     return input_data
 
 
-def open_and_norm_image(frame, input_size, transpose_tuple=None):
-    img = cv2.resize(frame, input_size)
+# TODO : delete this function
+def open_and_norm_image(cv2_img, input_size, transpose_tuple=None):
+    img = __resize_and_norm_image(cv2_img, input_size, transpose_tuple)
+    img = np.expand_dims(img, axis=0)
+    return img
+
+
+def open_and_norm_images(cv2_images, input_size, transpose_tuple=None):
+    images = []
+    for cv2_img in cv2_images:
+        img = __resize_and_norm_image(cv2_img, input_size, transpose_tuple)
+        images.append(img)
+    return np.array(images)
+
+
+def __resize_and_norm_image(cv2_img, input_size, transpose_tuple=None):
+    img = cv2.resize(cv2_img, input_size)
     img = img[:, :, (2, 1, 0)].astype(np.float32)
     img -= np.array([123, 117, 104])
 
     # transpose if needed
-    img = tranpose_if_needed(img, transpose_tuple)
-    img = np.expand_dims(img, axis=0)
-    return img
+    return tranpose_if_needed(img, transpose_tuple)
 
 
 def tranpose_if_needed(image_array, transpose_tuple=None):

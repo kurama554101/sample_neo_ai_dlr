@@ -21,7 +21,7 @@ class SageMakerNeoWrapper:
         self.__model_loader = loader
         self.__model = dlr.DLRModel(model_path, self.__params.target_device)
 
-    def run(self, img):
+    def run(self, cv2_images):
         if self.__model is None:
             raise NotLoadException("SageMakerNeo Runtime is not initialized! Please call 'load' function.")
 
@@ -29,8 +29,8 @@ class SageMakerNeoWrapper:
         model_define = self.__params.model_define
         transpose_tuple = get_transpose_tuple(model_define)
         input_size = self.__params.model_define["input_size"]
-        img_ndarray = util.open_and_norm_image(img, input_size, transpose_tuple)
-        input_tensor = img_ndarray.astype("float32")
+        imgs_ndarray = util.open_and_norm_images(cv2_images, input_size, transpose_tuple)
+        input_tensor = imgs_ndarray.astype("float32")
         input_data = util.get_input_data(model_define, input_tensor)
 
         # run inference
@@ -39,6 +39,8 @@ class SageMakerNeoWrapper:
     def get_result(self):
         model_detail = self.__model_loader.get_model_detail()
         return self.__convert_result(origin_result=self.__result, model_type=model_detail.model_type, threshold=self.__params.threshold)
+
+
 
     def __convert_result(self, origin_result, model_type, threshold):
         converter = NeoResultConverterFactory.get_converter(model_type)
@@ -94,7 +96,7 @@ class NeoResultConverterFactory:
             raise NeoResultConverterNotDefinedError("{} : neo result converter is not defined.".format(model_type))
 
 
-class NeoResultConverterNotDefinedError(Exception)
+class NeoResultConverterNotDefinedError(Exception):
     pass
 
 
@@ -108,6 +110,10 @@ class NeoResultConverter:
     def convert_result(self, origin_result, threshold):
         pass
 
+    @abstractmethod
+    def draw_boxes(self, origin_result, threshold):
+        pass
+
 
 class TFResultConverter(NeoResultConverter):
     def __init__(self):
@@ -117,11 +123,19 @@ class TFResultConverter(NeoResultConverter):
         # TODO : imp
         pass
 
+    def draw_boxes(self, origin_result, threshold):
+        # TODO : imp
+        pass
+
 
 class MXNetResultConverter(NeoResultConverter):
     def __init__(self):
         super(MXNetResultConverter, self).__init__()
 
     def convert_result(self, origin_result, threshold):
+        # TODO : imp
+        pass
+
+    def draw_boxes(self, origin_result, threshold):
         # TODO : imp
         pass

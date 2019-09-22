@@ -26,7 +26,7 @@ def main():
     input_files = [args.input_file_path]
     image_size = model_define["input_size"]
     transpose_tuple = get_transpose_tuple(model_define)
-    input_tensor = util.get_ndarray_from_image(input_files, image_size, transpose_tuple)
+    input_tensor = util.get_ndarray_from_imagefiles(input_files, image_size, transpose_tuple)
     input_data = util.get_input_data(model_define, input_tensor)
 
     # run inference
