@@ -2,6 +2,7 @@ from model_loader import ModelLoaderFactory, get_transpose_tuple, ModelType
 import util
 import dlr
 from abc import ABCMeta, abstractmethod
+import numpy as np
 
 
 class SageMakerNeoWrapper:
@@ -40,7 +41,9 @@ class SageMakerNeoWrapper:
         model_detail = self.__model_loader.get_model_detail()
         return self.__convert_result(origin_result=self.__result, model_type=model_detail.model_type, threshold=self.__params.threshold)
 
-
+    def draw_boxes(self, images):
+        # TODO : imp
+        pass
 
     def __convert_result(self, origin_result, model_type, threshold):
         converter = NeoResultConverterFactory.get_converter(model_type)
@@ -133,8 +136,30 @@ class MXNetResultConverter(NeoResultConverter):
         super(MXNetResultConverter, self).__init__()
 
     def convert_result(self, origin_result, threshold):
-        # TODO : imp
-        pass
+        convert_res_for_imgs = []
+        for res_for_img in origin_result[0]:
+            convert_res_for_img = []
+            for det in res_for_img:
+                # get class id
+                cid = int(det[0])
+                if cid < 0:
+                    continue
+
+                # get score (check if it is the threshold)
+                score = det[1]
+                if score < threshold:
+                    continue
+
+                # get box size
+                (left, right, top, bottom) = (det[2], det[4], det[3], det[5])
+
+                # add result(class id, score, left, top, right, bottom)
+                convert_res_for_img.append([cid, score, left, top, right, bottom])
+            convert_res_for_imgs.append(convert_res_for_img)
+
+        # create neo result
+        result = NeoInferResult(np.array(convert_res_for_imgs))
+        return result
 
     def draw_boxes(self, origin_result, threshold):
         # TODO : imp
