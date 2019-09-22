@@ -76,7 +76,7 @@ class NeoInferResult:
             - image file
             [
                 - object
-                [class id, score, boxes(left, top, right, bottom)]
+                [class id, score, boxes(bottom, left, top, right)]
 
                 ...
                 []
@@ -84,6 +84,8 @@ class NeoInferResult:
             ...
             []
         ]
+
+        (ymin, xmin, ymax, xmax) -> (bottom, left, top, right)
         """
         return self.__result
 
@@ -106,34 +108,68 @@ class NeoResultConverterNotDefinedError(Exception):
 class NeoResultConverter:
     __metaclass__ = ABCMeta
 
-    def __init__(self):
-        pass
+    def __init__(self, one_detect_callback=None, one_image_callback=None):
+        """
+        initialize converter
+        :param one_detect_callback: detection callback
+            param is [image_number, cid, score, bottom, left, top, right]
+        :param one_image_callback:
+            param is [image_number]
+        """
+        self._one_detect_callback = one_detect_callback
+        self._one_image_callback = one_image_callback
 
     @abstractmethod
     def convert_result(self, origin_result, threshold):
         pass
 
-    @abstractmethod
     def draw_boxes(self, origin_result, threshold):
         pass
 
 
 class TFResultConverter(NeoResultConverter):
-    def __init__(self):
-        super(TFResultConverter, self).__init__()
+    def __init__(self, one_detect_callback=None, one_image_callback=None):
+        super(TFResultConverter, self).__init__(one_detect_callback, one_image_callback)
 
     def convert_result(self, origin_result, threshold):
-        # TODO : imp
-        pass
+        boxes, classes, scores, num_det = origin_result
 
-    def draw_boxes(self, origin_result, threshold):
-        # TODO : imp
-        pass
+        # get file count
+        file_count = len(num_det)
+
+        # start loop
+        convert_res_for_imgs = []
+        for i in range(file_count):
+            n_obj = int(num_det[i])
+            convert_res_for_img = []
+            for j in range(n_obj):
+                # get class id
+                cid = int(classes[i][j])
+
+                # get score (check if it is the threshold)
+                score = scores[i][j]
+                if score < threshold:
+                    continue
+
+                # get box size
+                box = boxes[i][j]
+
+                # add result(class, id, score, box)
+                convert_res_for_img.append([cid, score, box[0], box[1], box[2], box[3]])
+
+                # do callback function if needed
+                if self._one_detect_callback is not None:
+                    self._one_detect_callback(i, cid, score, box[0], box[1], box[2], box[3])
+            convert_res_for_imgs.append(convert_res_for_img)
+
+            # create neo result
+            result = NeoInferResult(np.array(convert_res_for_imgs))
+            return result
 
 
 class MXNetResultConverter(NeoResultConverter):
-    def __init__(self):
-        super(MXNetResultConverter, self).__init__()
+    def __init__(self, one_detect_callback=None, one_image_callback=None):
+        super(MXNetResultConverter, self).__init__(one_detect_callback, one_image_callback)
 
     def convert_result(self, origin_result, threshold):
         convert_res_for_imgs = []
@@ -153,14 +189,10 @@ class MXNetResultConverter(NeoResultConverter):
                 # get box size
                 (left, right, top, bottom) = (det[2], det[4], det[3], det[5])
 
-                # add result(class id, score, left, top, right, bottom)
-                convert_res_for_img.append([cid, score, left, top, right, bottom])
+                # add result(class id, score, box)
+                convert_res_for_img.append([cid, score, bottom, left, top, right])
             convert_res_for_imgs.append(convert_res_for_img)
 
         # create neo result
         result = NeoInferResult(np.array(convert_res_for_imgs))
         return result
-
-    def draw_boxes(self, origin_result, threshold):
-        # TODO : imp
-        pass
