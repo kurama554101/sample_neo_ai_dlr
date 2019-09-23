@@ -48,7 +48,9 @@ class SageMakerNeoWrapper:
 
         # create result creator
         model_type = self.__model_loader.get_model_detail().model_type
-        self.__result_creator = NeoResultConverterFactory.get_converter(model_type, self.__one_detect_callback, self.__one_image_callback)
+        self.__result_creator = NeoResultConverterFactory.get_converter(model_type,
+                                                                        self.__one_detect_callback,
+                                                                        self.__one_image_callback)
 
     def run(self, cv2_images, file_name_list=None):
         # check model state and argument
@@ -71,9 +73,7 @@ class SageMakerNeoWrapper:
         result = self.__model.run(input_data)
 
         # create result
-        model_type = self.__model_loader.get_model_detail().model_type
-        converter = NeoResultConverterFactory.get_converter(model_type)
-        return converter.create_result(cv2_images, result, self.__params.threshold, file_name_list)
+        return self.__result_creator.create_result(cv2_images, result, self.__params.threshold, file_name_list)
 
 
 class NotLoadException(Exception):
