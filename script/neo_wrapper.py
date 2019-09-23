@@ -20,6 +20,9 @@ class SageMakerNeoWrapper:
         self.__one_detect_callback = None
         if self.__params.is_draw_box:
             def callback(image, cid, score, bottom, left, top, right):
+                # debug
+                print("callback1 : box size is {}, {}, {}, {}".format(bottom, left, top, right))
+
                 p1 = (int(left), int(top))
                 p2 = (int(right), int(bottom))
                 cv2.rectangle(image, p1, p2, (77, 255, 9), 3, 1)
@@ -52,10 +55,12 @@ class SageMakerNeoWrapper:
                                                                         self.__one_detect_callback,
                                                                         self.__one_image_callback)
 
-    def run(self, original_images, file_name_list=None):
+    def run(self, original_images, output_size, file_name_list=None):
         """
         run inference.
         :param original_images: numpy.ndarray
+        :param output_size: tuple
+            output size. format is (width, height).
         :param file_name_list: list
         :return:
         """
@@ -173,7 +178,7 @@ class AbstractNeoResultCreator:
         self._one_image_callback = one_image_callback
 
     @abstractmethod
-    def create_result(self, origin_images, origin_result, threshold, file_name_list=None):
+    def create_result(self, origin_images, origin_result, output_size, threshold, file_name_list=None):
         pass
 
 
@@ -181,7 +186,7 @@ class TFResultCreator(AbstractNeoResultCreator):
     def __init__(self, one_detect_callback=None, one_image_callback=None):
         super(TFResultCreator, self).__init__(one_detect_callback, one_image_callback)
 
-    def create_result(self, origin_images, origin_result, threshold, file_name_list=None):
+    def create_result(self, origin_images, origin_result, output_size, threshold, file_name_list=None):
         boxes, classes, scores, num_det = origin_result
 
         # get file count
@@ -202,10 +207,13 @@ class TFResultCreator(AbstractNeoResultCreator):
                     continue
 
                 # get box size
+                width = output_size[0]
+                height = output_size[1]
                 box = boxes[i][j]
+                (bottom, left, top, right) = box[0] * height, box[1] * width, box[2] * height, box[3] * width
 
                 # add result(class, id, score, box)
-                convert_res_for_img.append([cid, score, box[0], box[1], box[2], box[3]])
+                convert_res_for_img.append([cid, score, bottom, left, top, right])
 
                 # do callback function if needed
                 if self._one_detect_callback is not None:
@@ -225,7 +233,7 @@ class MXNetResultCreator(AbstractNeoResultCreator):
     def __init__(self, one_detect_callback=None, one_image_callback=None):
         super(MXNetResultCreator, self).__init__(one_detect_callback, one_image_callback)
 
-    def create_result(self, origin_images, origin_result, threshold, file_name_list=None):
+    def create_result(self, origin_images, origin_result, output_size, threshold, file_name_list=None):
         convert_res_for_imgs = []
         for i, res_for_img in enumerate(origin_result[0]):
             convert_res_for_img = []
@@ -241,7 +249,9 @@ class MXNetResultCreator(AbstractNeoResultCreator):
                     continue
 
                 # get box size
-                (left, right, top, bottom) = (det[2], det[4], det[3], det[5])
+                width = output_size[0]
+                height = output_size[1]
+                (left, right, top, bottom) = (det[2] * width, det[4] * width, det[3] * height, det[5] * height)
 
                 # add result(class id, score, box)
                 convert_res_for_img.append([cid, score, bottom, left, top, right])
