@@ -87,7 +87,10 @@ class SageMakerNeoWrapper:
         result = self.__model.run(input_data)
 
         # create result
-        return self.__result_creator.create_result(original_images, result, self.__params.threshold, file_name_list)
+        return self.__result_creator.create_result(original_images,
+                                                   result, output_size,
+                                                   self.__params.threshold,
+                                                   file_name_list)
 
 
 class NotLoadException(Exception):
@@ -217,7 +220,7 @@ class TFResultCreator(AbstractNeoResultCreator):
 
                 # do callback function if needed
                 if self._one_detect_callback is not None:
-                    self._one_detect_callback(origin_images[i], cid, score, box[0], box[1], box[2], box[3])
+                    self._one_detect_callback(origin_images[i], cid, score, bottom, left, top, right)
             convert_res_for_imgs.append(convert_res_for_img)
 
             # do callback function if needed
