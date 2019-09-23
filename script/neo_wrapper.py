@@ -3,14 +3,31 @@ import util
 import dlr
 from abc import ABCMeta, abstractmethod
 import numpy as np
+import os
+from PIL import Image
 
 
 class SageMakerNeoWrapper:
     def __init__(self, params):
         self.__model = None
         self.__model_loader = None
-        self.__result = None
+        # self.__result = None
         self.__params = params
+
+        # set callback
+        self.__one_detect_callback = None
+        if self.__params.is_draw_box:
+            def callback(image, cid, score, bottom, left, top, right):
+                # TODO : imp
+                return 0
+            self.__one_detect_callback = callback
+
+        self.__one_image_callback = None
+        if self.__params.is_save_image_with_box:
+            def callback2(image, file_name):
+                out_file_name = os.path.splitext(file_name)[0] + "_with_boxes.png"
+                Image.fromarray(image).save(out_file_name)
+            self.__one_image_callback = callback2
 
     def load(self):
         # load model data
@@ -22,12 +39,17 @@ class SageMakerNeoWrapper:
         self.__model_loader = loader
         self.__model = dlr.DLRModel(model_path, self.__params.target_device)
 
-    def run(self, cv2_images):
+    def run(self, cv2_images, file_name_list=None):
+        # check model state and argument
         if self.__model is None:
             raise NotLoadException("SageMakerNeo Runtime is not initialized! Please call 'load' function.")
 
+        if file_name_list is not None and len(cv2_images) != len(file_name_list):
+            raise ArgumentException("images count is not equal file name list count!")
+
         # create input data
         model_define = self.__params.model_define
+        # TODO : move "transpose_tuple" function from model_loader class to this class.
         transpose_tuple = get_transpose_tuple(model_define)
         input_size = self.__params.model_define["input_size"]
         imgs_ndarray = util.open_and_norm_images(cv2_images, input_size, transpose_tuple)
@@ -35,36 +57,38 @@ class SageMakerNeoWrapper:
         input_data = util.get_input_data(model_define, input_tensor)
 
         # run inference
-        self.__result = self.__model.run(input_data)
+        result = self.__model.run(input_data)
 
-    def get_result(self):
-        model_detail = self.__model_loader.get_model_detail()
-        return self.__convert_result(origin_result=self.__result, model_type=model_detail.model_type, threshold=self.__params.threshold)
-
-    def draw_boxes(self, images):
-        # TODO : imp
-        pass
-
-    def __convert_result(self, origin_result, model_type, threshold):
+        # create result
+        model_type = self.__model_loader.get_model_detail().model_type
         converter = NeoResultConverterFactory.get_converter(model_type)
-        return converter.convert_result(origin_result, threshold)
+        return converter.create_result(cv2_images, result, self.__params.threshold, file_name_list)
 
 
 class NotLoadException(Exception):
     pass
 
 
+class ArgumentException(Exception):
+    pass
+
+
 class NeoParameters:
-    def __init__(self, model_define, model_root_path, target_device, threshold=0.5):
+    def __init__(self, model_define, model_root_path, target_device,
+                 threshold=0.5, is_draw_box=True, is_save_image_with_box=False
+                 ):
         self.model_define = model_define
         self.model_root_path = model_root_path
         self.target_device = target_device
         self.threshold = threshold
+        self.is_draw_box = is_draw_box
+        self.is_save_image_with_box = is_save_image_with_box
 
 
 class NeoInferResult:
-    def __init__(self, result):
+    def __init__(self, result, images):
         self.__result = result
+        self.__images = images
 
     def get_result(self):
         """
@@ -89,14 +113,23 @@ class NeoInferResult:
         """
         return self.__result
 
+    def get_images(self):
+        """
+        get images.
+        :return:
+
+        images shape is (N
+        """
+        return self.__images
+
 
 class NeoResultConverterFactory:
     @classmethod
     def get_converter(cls, model_type):
         if model_type == ModelType.TENSORFLOW:
-            return TFResultConverter()
+            return TFResultCreator()
         elif model_type == ModelType.MXNET:
-            return MXNetResultConverter()
+            return MXNetResultCreator()
         else:
             raise NeoResultConverterNotDefinedError("{} : neo result converter is not defined.".format(model_type))
 
@@ -105,33 +138,30 @@ class NeoResultConverterNotDefinedError(Exception):
     pass
 
 
-class NeoResultConverter:
+class AbstractNeoResultCreator:
     __metaclass__ = ABCMeta
 
     def __init__(self, one_detect_callback=None, one_image_callback=None):
         """
-        initialize converter
+        initialize result creator
         :param one_detect_callback: detection callback
-            param is [image_number, cid, score, bottom, left, top, right]
+            param is [image array, cid, score, bottom, left, top, right]
         :param one_image_callback:
-            param is [image_number]
+            param is [image array, file name]
         """
         self._one_detect_callback = one_detect_callback
         self._one_image_callback = one_image_callback
 
     @abstractmethod
-    def convert_result(self, origin_result, threshold):
-        pass
-
-    def draw_boxes(self, origin_result, threshold):
+    def create_result(self, origin_images, origin_result, threshold, file_name_list=None):
         pass
 
 
-class TFResultConverter(NeoResultConverter):
+class TFResultCreator(AbstractNeoResultCreator):
     def __init__(self, one_detect_callback=None, one_image_callback=None):
-        super(TFResultConverter, self).__init__(one_detect_callback, one_image_callback)
+        super(TFResultCreator, self).__init__(one_detect_callback, one_image_callback)
 
-    def convert_result(self, origin_result, threshold):
+    def create_result(self, origin_images, origin_result, threshold, file_name_list=None):
         boxes, classes, scores, num_det = origin_result
 
         # get file count
@@ -159,21 +189,25 @@ class TFResultConverter(NeoResultConverter):
 
                 # do callback function if needed
                 if self._one_detect_callback is not None:
-                    self._one_detect_callback(i, cid, score, box[0], box[1], box[2], box[3])
+                    self._one_detect_callback(origin_images[i], cid, score, box[0], box[1], box[2], box[3])
             convert_res_for_imgs.append(convert_res_for_img)
 
-            # create neo result
-            result = NeoInferResult(np.array(convert_res_for_imgs))
-            return result
+            # do callback function if needed
+            if self._one_image_callback is not None and file_name_list is not None:
+                self._one_image_callback(origin_images[i], file_name_list[i])
+
+        # create neo result
+        result = NeoInferResult(np.array(convert_res_for_imgs), origin_images)
+        return result
 
 
-class MXNetResultConverter(NeoResultConverter):
+class MXNetResultCreator(AbstractNeoResultCreator):
     def __init__(self, one_detect_callback=None, one_image_callback=None):
-        super(MXNetResultConverter, self).__init__(one_detect_callback, one_image_callback)
+        super(MXNetResultCreator, self).__init__(one_detect_callback, one_image_callback)
 
-    def convert_result(self, origin_result, threshold):
+    def create_result(self, origin_images, origin_result, threshold, file_name_list=None):
         convert_res_for_imgs = []
-        for res_for_img in origin_result[0]:
+        for i, res_for_img in enumerate(origin_result[0]):
             convert_res_for_img = []
             for det in res_for_img:
                 # get class id
@@ -191,8 +225,16 @@ class MXNetResultConverter(NeoResultConverter):
 
                 # add result(class id, score, box)
                 convert_res_for_img.append([cid, score, bottom, left, top, right])
+
+                # do callback function if needed
+                if self._one_detect_callback is not None:
+                    self._one_detect_callback(origin_images[i], cid, score, bottom, left, top, right)
             convert_res_for_imgs.append(convert_res_for_img)
 
+            # do callback function if needed
+            if self._one_image_callback is not None and file_name_list is not None:
+                self._one_image_callback(origin_images[i], file_name_list[i])
+
         # create neo result
-        result = NeoInferResult(np.array(convert_res_for_imgs))
+        result = NeoInferResult(np.array(convert_res_for_imgs), origin_images)
         return result
