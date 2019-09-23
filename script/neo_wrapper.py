@@ -52,20 +52,29 @@ class SageMakerNeoWrapper:
                                                                         self.__one_detect_callback,
                                                                         self.__one_image_callback)
 
-    def run(self, cv2_images, file_name_list=None):
+    def run(self, original_images, file_name_list=None):
+        """
+        run inference.
+        :param original_images: numpy.ndarray
+        :param file_name_list: list
+        :return:
+        """
         # check model state and argument
         if self.__model is None:
             raise NotLoadException("SageMakerNeo Runtime is not initialized! Please call 'load' function.")
 
-        if file_name_list is not None and len(cv2_images) != len(file_name_list):
+        if file_name_list is not None and len(original_images) != len(file_name_list):
             raise ArgumentException("images count is not equal file name list count!")
+
+        # copy origin images
+        images = np.copy(original_images)
 
         # create input data
         model_define = self.__params.model_define
         # TODO : move "transpose_tuple" function from model_loader class to this class.
         transpose_tuple = get_transpose_tuple(model_define)
         input_size = self.__params.model_define["input_size"]
-        imgs_ndarray = util.open_and_norm_images(cv2_images, input_size, transpose_tuple)
+        imgs_ndarray = util.open_and_norm_images(images, input_size, transpose_tuple)
         input_tensor = imgs_ndarray.astype("float32")
         input_data = util.get_input_data(model_define, input_tensor)
 
@@ -73,7 +82,7 @@ class SageMakerNeoWrapper:
         result = self.__model.run(input_data)
 
         # create result
-        return self.__result_creator.create_result(cv2_images, result, self.__params.threshold, file_name_list)
+        return self.__result_creator.create_result(original_images, result, self.__params.threshold, file_name_list)
 
 
 class NotLoadException(Exception):

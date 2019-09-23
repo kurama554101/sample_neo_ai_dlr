@@ -3,6 +3,9 @@
 # save directory
 v_dir=`pwd`
 
+# get core packages for opencv
+apt-get install -y libsm6 libxrender1
+
 # build opencv
 ln -s /usr/include/libv4l1-videodev.h /usr/include/linux/videodev.h
 mkdir tmp
