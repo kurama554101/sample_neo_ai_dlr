@@ -5,21 +5,28 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import os
 from PIL import Image
+import cv2
+import coco
 
 
 class SageMakerNeoWrapper:
     def __init__(self, params):
         self.__model = None
         self.__model_loader = None
-        # self.__result = None
+        self.__result_creator = None
         self.__params = params
 
-        # set callback
+        # create converter
         self.__one_detect_callback = None
         if self.__params.is_draw_box:
             def callback(image, cid, score, bottom, left, top, right):
-                # TODO : imp
-                return 0
+                p1 = (int(left), int(top))
+                p2 = (int(right), int(bottom))
+                cv2.rectangle(image, p1, p2, (77, 255, 9), 3, 1)
+                cv2.putText(
+                    image, coco.IMAGE_CLASSES[cid], (int(left + 10), int((top + bottom) / 2)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA
+                )
             self.__one_detect_callback = callback
 
         self.__one_image_callback = None
@@ -38,6 +45,10 @@ class SageMakerNeoWrapper:
         # create Deep Learning Runtime
         self.__model_loader = loader
         self.__model = dlr.DLRModel(model_path, self.__params.target_device)
+
+        # create result creator
+        model_type = self.__model_loader.get_model_detail().model_type
+        self.__result_creator = NeoResultConverterFactory.get_converter(model_type, self.__one_detect_callback, self.__one_image_callback)
 
     def run(self, cv2_images, file_name_list=None):
         # check model state and argument
@@ -77,7 +88,7 @@ class NeoParameters:
     def __init__(self, model_define, model_root_path, target_device,
                  threshold=0.5, is_draw_box=True, is_save_image_with_box=False
                  ):
-        self.model_define = model_define
+        self.model_define = model_define.value
         self.model_root_path = model_root_path
         self.target_device = target_device
         self.threshold = threshold
@@ -125,11 +136,11 @@ class NeoInferResult:
 
 class NeoResultConverterFactory:
     @classmethod
-    def get_converter(cls, model_type):
+    def get_converter(cls, model_type, one_detect_callback=None, one_image_callback=None):
         if model_type == ModelType.TENSORFLOW:
-            return TFResultCreator()
+            return TFResultCreator(one_detect_callback, one_image_callback)
         elif model_type == ModelType.MXNET:
-            return MXNetResultCreator()
+            return MXNetResultCreator(one_detect_callback, one_image_callback)
         else:
             raise NeoResultConverterNotDefinedError("{} : neo result converter is not defined.".format(model_type))
 
