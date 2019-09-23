@@ -6,7 +6,7 @@ import numpy as np
 import os
 from PIL import Image
 import cv2
-import coco
+from coco import coco
 
 
 class SageMakerNeoWrapper:
