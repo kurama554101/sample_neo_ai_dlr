@@ -24,7 +24,7 @@ def main():
     file_path_list = [file_path]
 
     # run inference
-    size = (480, 640)
+    size = (768, 576)
     result = wrapper.run(original_images=cv2_images, output_size=size, file_name_list=file_path_list)
     print(result)
 
