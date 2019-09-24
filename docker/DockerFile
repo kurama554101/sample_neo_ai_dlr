@@ -8,53 +8,34 @@ RUN echo "now building..."
 # update apt-get
 RUN apt-get update --fix-missing
 
-# install core packages
-RUN set -x && \
-    apt-get install -y git && \
-    apt-get install -y wget && \
-    apt-get install -y vim
-
 # setup workdir
 WORKDIR /home/development/
 
-# install Python and Pip
+# add install directory
 ADD docker/install install/
+
+# install core packages
+RUN set -x && \
+    bash install/ubuntu_install_core_packages.sh
+
+# install Python and Pip
 RUN set -x && \
     bash install/ubuntu_install_python.sh
 
-# install cmake
-RUN set -x && \
-    mkdir tmp_cmake && cd tmp_cmake && \
-    wget https://github.com/Kitware/CMake/releases/download/v3.6.2/cmake-3.6.2.tar.gz && \
-    tar xvf cmake-3.6.2.tar.gz && cd cmake-3.6.2 && \
-    ./bootstrap && make && make install
-
-# install c compiler
-RUN apt-get install -yq make gcc g++ unzip build-essential gcc zlib1g-dev
-
 # build openCV
-RUN ln -s /usr/include/libv4l1-videodev.h /usr/include/linux/videodev.h
-RUN mkdir tmp
-RUN cd tmp && wget https://github.com/Itseez/opencv/archive/3.1.0.zip && unzip 3.1.0.zip
-RUN cd tmp/opencv-3.1.0 && cmake CMakeLists.txt -DWITH_TBB=ON \
-                                                  -DINSTALL_CREATE_DISTRIB=ON \
-                                                  -DWITH_FFMPEG=OFF \
-                                                  -DWITH_IPP=OFF \
-                                                  -DCMAKE_INSTALL_PREFIX=/usr/local
-RUN cd tmp/opencv-3.1.0 && make -j2 && make install
+RUN set -x && \
+    bash install/ubuntu_install_opencv.sh
+
+# install gstreamer
+RUN set -x && \
+    bash install/ubuntu_install_gstreamer.sh
 
 # install Tensorflow and openCV
 RUN pip3 install numpy tensorflow opencv-python
 
 # install SageMaker Neo Runtime
 RUN set -x && \
-    git clone --recursive https://github.com/neo-ai/neo-ai-dlr
-RUN set -x && \
-    cd neo-ai-dlr && \
-    mkdir build && cd build && \
-    cmake .. && \
-    make -j4 && \
-    cd ../python && python3 setup.py install --user
+    bash install/ubuntu_install_sagemaker_neo.sh
 
 # install python packages
 RUN set -x && \
@@ -65,14 +46,6 @@ RUN set -x && \
 RUN set -x && \
     git clone --recursive https://github.com/tensorflow/models && \
     pip3 install models/research && pip install models/research
-
-# test sagemaker neo runtime
-RUN set -x && \
-    python3 -c "import dlr"
-
-# remove temporary directory
-RUN set -x && \
-    rm -rf tmp tmp_cmake
 
 # start bash
 CMD [ '/bin/bash'  ]
