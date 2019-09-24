@@ -10,7 +10,7 @@ def main():
     args = parser.parse_args()
 
     # set model type
-    model_define = convert_model_define(args.model_type)
+    model_define = convert_model_define(args.model_type).value
 
     # load model data
     model_root_path = args.model_root_path

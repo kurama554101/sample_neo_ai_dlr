@@ -23,8 +23,9 @@ class SageMakerNeoWrapper:
                 p1 = (int(left), int(top))
                 p2 = (int(right), int(bottom))
                 cv2.rectangle(image, p1, p2, (77, 255, 9), 3, 1)
+                classes = self.__model_loader.get_classes()
                 cv2.putText(
-                    image, coco.IMAGE_CLASSES[cid], (int(left + 10), int((top + bottom) / 2)),
+                    image, classes[cid], (int(left + 10), int((top + bottom) / 2)),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA
                 )
             self.__one_detect_callback = callback

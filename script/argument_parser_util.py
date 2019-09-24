@@ -31,8 +31,8 @@ def create_argument_parser():
 
 def convert_model_define(arg_model_type):
     if arg_model_type == "tf_ssd":
-        return ModelDefine.TF_SSD_MOBILE_NET_V2_COCO.value
+        return ModelDefine.TF_SSD_MOBILE_NET_V2_COCO
     elif arg_model_type == "mx_ssd":
-        return ModelDefine.MXNET_SSD_MOBILE_NET_512.value
+        return ModelDefine.MXNET_SSD_MOBILE_NET_512
     else:
         raise Exception("{} model type is not defined in ModelDefine class!".format(arg_model_type))

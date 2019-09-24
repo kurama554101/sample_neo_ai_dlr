@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 import util
 import os
 from enum import Enum
+from coco import coco
 
 
 class ModelType(Enum):
@@ -33,7 +34,10 @@ class ModelDefine(Enum):
                 "https://s3.us-east-2.amazonaws.com/dlc-models/aisage/mxnet-ssd-mobilenet-512/model.so"
             ],
             "input_size": (512, 512),
-            "img_transpose": (2, 0, 1)
+            "img_transpose": (2, 0, 1),
+            "classes": ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair",
+                        "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant",
+                        "sheep", "sofa", "train", "tvmonitor"]
         }
 
 
@@ -54,11 +58,21 @@ class ModelLoaderFactory:
     @classmethod
     def get_loader(cls, model_define, root_path):
         loader_type = model_define["loader_type"]
+
+        # customize classes if needed
+        classes = coco.IMAGE_CLASSES
+        if "classes" in model_define:
+            classes = model_define["classes"]
+
+        # get loader
         if loader_type == ModelLoaderType.TF_ZOO_LOADER:
-            return TfModelZooLoader(root_path=root_path, url=model_define["url"])
+            return TfModelZooLoader(root_path=root_path, url=model_define["url"], classes=classes)
         elif loader_type == ModelLoaderType.MXNET_REMOTE_LOADER:
             return MXNetRemoteModelLoader(
-                root_path=root_path, model_dir_name=model_define["model_dir_name"], url_list=model_define["url_list"]
+                root_path=root_path,
+                model_dir_name=model_define["model_dir_name"],
+                url_list=model_define["url_list"],
+                classes=classes
             )
         else:
             raise UndefinedModelLoaderError("{} loader type is not defined!".format(loader_type))
@@ -71,9 +85,10 @@ class UndefinedModelLoaderError(Exception):
 class AbstractModelLoader:
     __metaclass__ = ABCMeta
 
-    def __init__(self, root_path, model_type):
+    def __init__(self, root_path, model_type, classes):
         self._root_path = root_path
         self._model_type = model_type
+        self._classes = classes
         os.makedirs(root_path, exist_ok=True)
 
     @abstractmethod
@@ -88,6 +103,9 @@ class AbstractModelLoader:
     def get_model_path(self):
         pass
 
+    def get_classes(self):
+        return self._classes
+
     @abstractmethod
     def _check_model_path(self):
         pass
@@ -100,8 +118,8 @@ class AbstractModelLoader:
 class RemoteArchiveModelLoader(AbstractModelLoader):
     __metaclass__ = ABCMeta
 
-    def __init__(self, root_path, model_type, url):
-        super(RemoteArchiveModelLoader, self).__init__(root_path, model_type)
+    def __init__(self, root_path, model_type, url, classes):
+        super(RemoteArchiveModelLoader, self).__init__(root_path, model_type, classes)
         self._url = url
 
     def setup(self):
@@ -144,8 +162,8 @@ class RemoteArchiveModelLoader(AbstractModelLoader):
 
 
 class TfModelZooLoader(RemoteArchiveModelLoader):
-    def __init__(self, root_path, url):
-        super(TfModelZooLoader, self).__init__(root_path, ModelType.TENSORFLOW, url)
+    def __init__(self, root_path, url, classes):
+        super(TfModelZooLoader, self).__init__(root_path, ModelType.TENSORFLOW, url, classes)
 
     def get_model_detail(self):
         model_file = os.path.join(self._get_model_dir_path(), "frozen_inference_graph.pb")
@@ -160,8 +178,8 @@ class TfModelZooLoader(RemoteArchiveModelLoader):
 class RemoteModelLoader(AbstractModelLoader):
     __metaclass__ = ABCMeta
 
-    def __init__(self, root_path, model_type, model_dir_name, url_list):
-        super(RemoteModelLoader, self).__init__(root_path, model_type)
+    def __init__(self, root_path, model_type, model_dir_name, url_list, classes):
+        super(RemoteModelLoader, self).__init__(root_path, model_type, classes)
         self._model_dir_name = model_dir_name
         self._url_list = url_list
 
@@ -195,8 +213,12 @@ class RemoteModelLoader(AbstractModelLoader):
 
 
 class MXNetRemoteModelLoader(RemoteModelLoader):
-    def __init__(self, root_path, model_dir_name, url_list):
-        super(MXNetRemoteModelLoader, self).__init__(root_path=root_path, model_type=ModelType.MXNET, model_dir_name=model_dir_name, url_list=url_list)
+    def __init__(self, root_path, model_dir_name, url_list, classes):
+        super(MXNetRemoteModelLoader, self).__init__(root_path=root_path,
+                                                     model_type=ModelType.MXNET,
+                                                     model_dir_name=model_dir_name,
+                                                     url_list=url_list,
+                                                     classes=classes)
 
     def get_model_detail(self):
         model_path_map = {}

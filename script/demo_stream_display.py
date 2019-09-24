@@ -3,6 +3,7 @@
 import cv2
 from argument_parser_util import create_argument_parser, convert_model_define
 from neo_wrapper import SageMakerNeoWrapper, NeoParameters
+from enum import Enum
 
 
 class DisplayType(Enum):
