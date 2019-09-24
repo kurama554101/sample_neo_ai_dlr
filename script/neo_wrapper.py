@@ -20,9 +20,6 @@ class SageMakerNeoWrapper:
         self.__one_detect_callback = None
         if self.__params.is_draw_box:
             def callback(image, cid, score, bottom, left, top, right):
-                # debug
-                print("callback1 : box size is {}, {}, {}, {}".format(bottom, left, top, right))
-
                 p1 = (int(left), int(top))
                 p2 = (int(right), int(bottom))
                 cv2.rectangle(image, p1, p2, (77, 255, 9), 3, 1)
