@@ -1,4 +1,4 @@
-# Sample Human Detection
+# Sample Object Detection by using SageMaker Neo Runtime
 
 ## introduction
 
