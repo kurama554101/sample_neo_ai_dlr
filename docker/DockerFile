@@ -47,5 +47,10 @@ RUN set -x && \
     git clone --recursive https://github.com/tensorflow/models && \
     pip3 install models/research && pip install models/research
 
+# install face_recognition framework
+RUN set -x && \
+    git clone --recursive https://github.com/ageitgey/face_recognition && \
+    pip3 install face_recognition
+
 # start bash
 CMD [ '/bin/bash'  ]
