@@ -2,6 +2,7 @@ import face_recognition
 import cv2
 import os
 import csv
+import time
 from enum import Enum
 from multiprocessing import Queue, Process, Pipe, set_start_method
 import platform
@@ -210,7 +211,10 @@ if __name__ == "__main__":
 
     # run
     print("start to run..")
+    start_time = time.time()
     recognition.run()
+    process_time = time.time() - start_time
+    print("process time is {}[sec]".format(process_time))
 
     # end
     print("end")
