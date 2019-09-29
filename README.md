@@ -2,11 +2,12 @@
 
 ## introduction
 
-TBD
+sample object detection and face recognition function
 
 ## environment
 
-TBD
+* Docker
+    * if you need to play face recognition codes, don't use docker container.
 
 ## install
 
@@ -30,7 +31,22 @@ $ docker run -v `pwd`/script:/home/development/script -it --name human_detection
 
 ### use sample inference script
 
-
 ```
 $ python3 /home/development/script/sample_infer.py
+```
+
+## use face recognition scripts
+
+### add face images
+
+Please do the following process to add the face information.
+
+* add the face images into "script/data/face_data"
+* add the face images path and face names into "script/data/face_list.csv"
+    * ex) write like ""obama.jpg","obama""
+ 
+### use sample face recognition scripts
+
+```
+$ python3 script/sample_face_recognition.py
 ```

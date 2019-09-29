@@ -29,3 +29,7 @@ pip3 install pillow && pip install pillow
 # install tensorflow models
 git clone --recursive https://github.com/tensorflow/models
 pip3 install models/research && pip install models/research
+
+# install face_recognition
+git clone --recursive https://github.com/ageitgey/face_recognition
+pip3 install face_recognition

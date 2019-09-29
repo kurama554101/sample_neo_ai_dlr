@@ -1,9 +1,12 @@
 import face_recognition
 import cv2
-import numpy as np
 import os
 import csv
+import time
 from enum import Enum
+from multiprocessing import Queue, Process, Pipe, set_start_method
+import platform
+from face_recognition_util import analyze_face_info_with_worker_process, get_face_information
 
 
 class DisplayType(Enum):
@@ -12,28 +15,43 @@ class DisplayType(Enum):
     HDTV1080p = (1920, 1080)
 
 
+class FaceRecognitionMode(Enum):
+    DrawBoundingBoxMode = 0
+    OneFaceRecognitionMode = 1
+
+
 class VideoCaptureParams:
     def __init__(self):
         self.size = DisplayType.HDTV720p.value
         self.fps = 30
 
 
+class FaceRecognitionError(Exception):
+    pass
+
+
 class RealTimeFaceRecognition:
     def __init__(self,
                  face_image_folder=os.path.join("data", "face_data"),
                  face_csv=os.path.join("data", "face_list.csv"),
-                 check_frame_count=2, reduction_ratio=4,
+                 face_recognition_mode=FaceRecognitionMode.DrawBoundingBoxMode,
+                 get_frame_per_count=2, reduction_ratio=4,
                  video_capture_params=VideoCaptureParams(),
+                 frame_count_with_use_face_recog=50,
                  debug_mode=False):
         self.__capture = None
         self.__face_image_folder = face_image_folder
         self.__face_csv = face_csv
-        self.__known_face_encodings = []
-        self.__known_face_names = []
-        self.__check_frame_count = check_frame_count
+        self.__face_recognition_mode = face_recognition_mode
+        self.__get_frame_per_count = get_frame_per_count
         self.__reduction_ratio = reduction_ratio
         self.__video_capture_params = video_capture_params
+        self.__frame_count_with_use_face_recog = frame_count_with_use_face_recog
         self.__debug_mode = debug_mode
+
+        # local value
+        self.__known_face_encodings = []
+        self.__known_face_names = []
 
     def setup(self):
         # set video capture
@@ -78,14 +96,22 @@ class RealTimeFaceRecognition:
         if self.__debug_mode:
             print("face data count is {}".format(len(self.__known_face_names)))
 
-    def capture_video(self):
+    def run(self):
+        if self.__face_recognition_mode == FaceRecognitionMode.DrawBoundingBoxMode:
+            self.__start_face_recognition_with_drawing_bounding_box()
+        elif self.__face_recognition_mode == FaceRecognitionMode.OneFaceRecognitionMode:
+            self.__start_one_face_recognition()
+        else:
+            raise FaceRecognitionError("{} mode is not defined!")
+
+    def __start_face_recognition_with_drawing_bounding_box(self):
         current_frame_count = 1
         face_locations = []
         face_names = []
 
         while True:
-            process_this_frame = (current_frame_count % self.__check_frame_count) == 0
-            self.do_capture_frame(process_this_frame, face_locations, face_names)
+            process_this_frame = (current_frame_count % self.__get_frame_per_count) == 0
+            self.__do_capture_frame(process_this_frame, face_locations, face_names)
             current_frame_count = 0 if process_this_frame else current_frame_count+1
 
             # Hit 'q' on the keyboard to quit!
@@ -96,45 +122,68 @@ class RealTimeFaceRecognition:
         self.__capture.release()
         cv2.destroyAllWindows()
 
-    def do_capture_frame(self, process_this_frame, face_locations, face_names):
-        ret, frame = self.__capture.read()
-        small_frame = cv2.resize(frame, (0, 0), fx=1/self.__reduction_ratio, fy=1/self.__reduction_ratio)
+    def __start_one_face_recognition(self):
+        face_locations = []
+        face_names = []
 
-        # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
-        rgb_small_frame = small_frame[:, :, ::-1]
+        # create queue to save video frame
+        q = Queue()
+
+        # start the process to do face recognition
+        recv_connection, send_connection = Pipe()
+        p = Process(target=analyze_face_info_with_worker_process,
+                    args=(send_connection, q, face_locations, face_names,
+                          self.__debug_mode, get_face_information, self.__frame_count_with_use_face_recog,
+                          self.__known_face_encodings, self.__known_face_names))
+        p.start()
+
+        # start video capture
+        while True:
+            _, rgb_small_frame = self.__get_frame()
+            q.put(rgb_small_frame)
+
+            # Hit 'q' on the keyboard to quit
+            # if face information is received, video frame process is stopped
+            if (cv2.waitKey(1) & 0xFF == ord('q')) or recv_connection.poll():
+                if self.__debug_mode:
+                    print("video capture is end.")
+                break
+
+        # get face info
+        face_info = recv_connection.recv()
+        print("face_info is {}".format(face_info))
+
+        # TODO : destroy each process
+        recv_connection.close()
+
+    def __do_capture_frame(self, process_this_frame, face_locations, face_names):
+        frame, rgb_small_frame = self.__get_frame()
 
         # Only process every other frame of video to save time
         if process_this_frame:
-            # Find all the faces and face encodings in the current frame of video
-            face_locations = face_recognition.face_locations(rgb_small_frame)
-            face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+            face_locations, face_names = get_face_information(rgb_small_frame, self.__known_face_encodings, self.__known_face_names)
 
-            face_names = []
-            for face_encoding in face_encodings:
-                # See if the face is a match for the known face(s)
-                matches = face_recognition.compare_faces(self.__known_face_encodings, face_encoding)
-                name = "Unknown"
+        # draw boxes into frame
+        self.__draw_boxes_into_frame(frame, face_locations, face_names, self.__reduction_ratio)
 
-                # # If a match was found in known_face_encodings, just use the first one.
-                # if True in matches:
-                #     first_match_index = matches.index(True)
-                #     name = known_face_names[first_match_index]
+        # Display the resulting image
+        cv2.imshow('Video', frame)
 
-                # Or instead, use the known face with the smallest distance to the new face
-                face_distances = face_recognition.face_distance(self.__known_face_encodings, face_encoding)
-                best_match_index = np.argmin(face_distances)
-                if matches[best_match_index]:
-                    name = self.__known_face_names[best_match_index]
+    def __get_frame(self):
+        ret, frame = self.__capture.read()
+        small_frame = cv2.resize(frame, (0, 0), fx=1 / self.__reduction_ratio, fy=1 / self.__reduction_ratio)
 
-                face_names.append(name)
+        # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
+        rgb_small_frame = small_frame[:, :, ::-1]
+        return frame, rgb_small_frame
 
-        # Display the results
+    def __draw_boxes_into_frame(self, frame, face_locations, face_names, reduction_ratio):
         for (top, right, bottom, left), name in zip(face_locations, face_names):
             # Scale back up face locations since the frame we detected in was scaled to 1/4 size
-            top *= self.__reduction_ratio
-            right *= self.__reduction_ratio
-            bottom *= self.__reduction_ratio
-            left *= self.__reduction_ratio
+            top *= reduction_ratio
+            right *= reduction_ratio
+            bottom *= reduction_ratio
+            left *= reduction_ratio
 
             # Draw a box around the face
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
@@ -144,12 +193,28 @@ class RealTimeFaceRecognition:
             font = cv2.FONT_HERSHEY_DUPLEX
             cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
 
-        # Display the resulting image
-        cv2.imshow('Video', frame)
-
 
 if __name__ == "__main__":
+    # fix bug of macOS
+    if platform.system() == 'Darwin':
+        set_start_method('forkserver')
+
     param = VideoCaptureParams()
-    recognition = RealTimeFaceRecognition(debug_mode=True, video_capture_params=param)
+    recognition = RealTimeFaceRecognition(debug_mode=True,
+                                          video_capture_params=param,
+                                          face_recognition_mode=FaceRecognitionMode.OneFaceRecognitionMode
+                                          )
+
+    # setup
+    print("start to setup...")
     recognition.setup()
-    recognition.capture_video()
+
+    # run
+    print("start to run..")
+    start_time = time.time()
+    recognition.run()
+    process_time = time.time() - start_time
+    print("process time is {}[sec]".format(process_time))
+
+    # end
+    print("end")
