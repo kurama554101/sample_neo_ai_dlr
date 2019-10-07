@@ -8,3 +8,6 @@ script/model/*
 
 # ignore venv
 venv/*
+
+# ignore cache file of image
+script/data/face_data/*.npy
