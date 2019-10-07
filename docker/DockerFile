@@ -52,5 +52,9 @@ RUN set -x && \
     git clone --recursive https://github.com/ageitgey/face_recognition && \
     pip3 install face_recognition
 
+# install streamlit
+RUN set -x && \
+    pip3 install streamlit
+
 # start bash
 CMD [ '/bin/bash'  ]

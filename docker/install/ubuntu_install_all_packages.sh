@@ -33,3 +33,6 @@ pip3 install models/research && pip install models/research
 # install face_recognition
 git clone --recursive https://github.com/ageitgey/face_recognition
 pip3 install face_recognition
+
+# install streamlit
+pip3 install streamlit
