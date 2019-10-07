@@ -1,4 +1,4 @@
-# Sample Object Detection by using SageMaker Neo Runtime
+# Sample Object Detection and Face Recognition
 
 ## introduction
 
