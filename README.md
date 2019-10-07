@@ -48,5 +48,6 @@ Please do the following process to add the face information.
 ### use sample face recognition scripts
 
 ```
-$ python3 script/sample_face_recognition.py
+$ cd script
+$ streamlit run sample_face_recognition.py
 ```
