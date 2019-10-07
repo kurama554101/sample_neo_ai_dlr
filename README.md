@@ -49,5 +49,5 @@ Please do the following process to add the face information.
 
 ```
 $ cd script
-$ streamlit run sample_face_recognition.py
+$ streamlit run run_face_recognition.py
 ```

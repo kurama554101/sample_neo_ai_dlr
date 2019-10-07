@@ -2,7 +2,7 @@ import time
 import argparse
 from multiprocessing import set_start_method
 import platform
-from face_recognition_util import DisplayType, FaceRecognitionMode, VideoCaptureParams, RealTimeFaceRecognition
+from face_recognition_util import FaceRecognitionMode, VideoCaptureParams, RealTimeFaceRecognition, DisplayType
 import streamlit as st
 
 
