@@ -20,11 +20,6 @@ def create_argument_parser():
         type=int
     )
     parser.add_argument(
-        "--mode",
-        default="one_face_recognition",
-        help="set face recognition mode. you can select it from 'one_face_recognition', 'draw_bounding_box'"
-    )
-    parser.add_argument(
         "--reduction_ratio",
         default=4,
         type=int
@@ -71,6 +66,18 @@ def get_use_frame_count(args):
     return args.count_of_using_frame
 
 
+@st.cache(ignore_hash=True)
+def get_recognition_module(param, frame_count_with_use_face_recog, reduction_ratio):
+    recognition = RealTimeFaceRecognition(debug_mode=True,
+                                          video_capture_params=param,
+                                          face_recognition_mode=FaceRecognitionMode.OneFaceRecognitionMode,
+                                          frame_count_with_use_face_recog=frame_count_with_use_face_recog,
+                                          reduction_ratio=reduction_ratio
+                                          )
+    recognition.setup()
+    return recognition
+
+
 if __name__ == "__main__":
     # fix bug of macOS
     if platform.system() == 'Darwin':
@@ -84,7 +91,6 @@ if __name__ == "__main__":
     parser = create_argument_parser()
     args = parser.parse_args()
     capture_size = get_capture_size(args)
-    mode = get_mode(args)
     capture_fps = get_fps(args)
     frame_count_with_use_face_recog = get_use_frame_count(args)
     reduction_ratio = get_reduction_ratio(args)
@@ -92,18 +98,12 @@ if __name__ == "__main__":
     param = VideoCaptureParams()
     param.size = capture_size
     param.fps = capture_fps
-    recognition = RealTimeFaceRecognition(debug_mode=True,
-                                          video_capture_params=param,
-                                          face_recognition_mode=mode,
-                                          frame_count_with_use_face_recog=frame_count_with_use_face_recog,
-                                          reduction_ratio=reduction_ratio
-                                          )
 
     # setup
     print("start to setup...")
     with st.spinner('Wait for setup...'):
         setup_start_time = time.time()
-        recognition.setup()
+        recognition = get_recognition_module(param, frame_count_with_use_face_recog, reduction_ratio)
         setup_process_time = time.time() - setup_start_time
     st.success('setup done! process time is {}'.format(setup_process_time))
 

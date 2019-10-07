@@ -8,17 +8,11 @@ def main():
     param = VideoCaptureParams()
     param.size = DisplayType.VGA.value
     param.fps = 30
-
-    rtfr = RealTimeFaceRecognition(
-        debug_mode=True,
-        video_capture_params=param,
-        face_recognition_mode=FaceRecognitionMode.OneFaceRecognitionMode,
-        frame_count_with_use_face_recog=10,
-        reduction_ratio=4
-    )
+    frame_count_with_use_face_recog = 10
+    reduction_ratio = 4
 
     with st.spinner('Wait for setup...'):
-        rtfr.setup()
+        rtfr = get_recognition_module(param, frame_count_with_use_face_recog, reduction_ratio)
     st.success('setup done!')
 
     with st.spinner("Wait for run..."):
@@ -31,6 +25,19 @@ def main():
 
     # reload button
     st.button("reload")
+
+
+@st.cache(ignore_hash=True)
+def get_recognition_module(param, frame_count_with_use_face_recog, reduction_ratio):
+    rtfr = RealTimeFaceRecognition(
+        debug_mode=True,
+        video_capture_params=param,
+        face_recognition_mode=FaceRecognitionMode.OneFaceRecognitionMode,
+        frame_count_with_use_face_recog=frame_count_with_use_face_recog,
+        reduction_ratio=reduction_ratio
+    )
+    rtfr.setup()
+    return rtfr
 
 
 if __name__ == "__main__":
