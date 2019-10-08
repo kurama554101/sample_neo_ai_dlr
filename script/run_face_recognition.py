@@ -49,6 +49,9 @@ if __name__ == "__main__":
     frame_count_with_use_face_recog = st.sidebar.slider("frame count with use face recognition", min_value=2,
                                                         max_value=50, value=10)
     reduction_ratio = st.sidebar.selectbox("reduction ratio", (4, 2))
+    st.sidebar.button("reload")
+
+    # create VideoCaptureParams
     param = VideoCaptureParams()
     param.size = get_capture_size(display_mode_str)
     param.fps = fps
@@ -72,9 +75,6 @@ if __name__ == "__main__":
     # write frame of face recognition
     result = recognition.get_result()
     st.image(result.FrameData)
-
-    # set reload button
-    st.sidebar.button("reload")
 
     # end
     print("end")
