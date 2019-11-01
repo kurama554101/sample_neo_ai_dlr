@@ -51,3 +51,18 @@ Please do the following process to add the face information.
 $ cd script
 $ streamlit run run_face_recognition.py
 ```
+
+### use face recognition api
+
+Please do the following process to start api server of face recognition
+
+```
+$ cd script
+$ python3 web_api.py
+```
+
+You need to call following command to use face recognition api
+
+```
+$ curl localhost:5000/face
+```

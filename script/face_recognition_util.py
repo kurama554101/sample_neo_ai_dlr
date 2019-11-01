@@ -33,6 +33,7 @@ class FaceRecognitionError(Exception):
 class FaceRecognitionResult:
     def __init__(self):
         self.FrameData = None
+        self.FaceName = None
 
 
 class RealTimeFaceRecognition:
@@ -199,6 +200,7 @@ class RealTimeFaceRecognition:
         # display frame until exit command is received
         result = FaceRecognitionResult()
         result.FrameData = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # need to convert from BGR to RGB because frame data is BGR color
+        result.FaceName = face_names[0]
         self.__result = result
 
     def __do_capture_frame(self, process_this_frame, face_locations, face_names):
